@@ -1,0 +1,113 @@
+---
+name: back-prisma-change
+description: Modify the Prisma schema (`prisma/schema.prisma`) and produce/apply a migration safely — including renames, nullable→non-null transitions, enum changes, and relations. Use when the user asks to add a model/field, change a column, add a relation, write a migration, or troubleshoot Prisma errors.
+---
+
+> **Scope:** este skill opera sobre o workspace `back-end/`. Execute comandos e interprete caminhos relativos a esse diretório.
+
+# prisma-change
+
+Use this skill when the user wants to change the data model. The repo uses **Prisma 6** against **SQLite** (`prisma/dev.db`). Migrations live in `prisma/migrations/`. The schema is `prisma/schema.prisma`. The client is regenerated into `node_modules/.prisma/client`. Do **not** change the Prisma `provider` away from `sqlite` — the template's zero-setup promise depends on it. SQLite quirks to remember: no native enums (Prisma emits a CHECK constraint or string), no array columns, no concurrent writers — keep transactions short.
+
+## Workflow (the standard happy path)
+
+1. **Edit `prisma/schema.prisma`** — add/modify the model, field, enum, or relation.
+2. **Generate a migration**: `npm run prisma:migrate` (this is `prisma migrate dev`). It will:
+   - prompt for a migration name — use kebab-case, descriptive (`add-orders-table`, `make-user-name-required`),
+   - create a SQL file under `prisma/migrations/<timestamp>_<name>/migration.sql`,
+   - apply it to your local dev DB,
+   - regenerate the typed client.
+3. **Verify** the generated SQL before committing. Open the new `migration.sql` and read it. Migrations are reviewed code, not magic.
+4. **Touch the code that uses the changed shape** so TypeScript is in sync (`@prisma/client` types are already regenerated).
+5. **Run `npm run build` and `npm test`** to make sure nothing else broke.
+6. **Commit the schema and the migration together** — never one without the other.
+
+If the user only asks for "regenerate the client", run `npm run prisma:generate` (no migration involved).
+
+## Safe / unsafe operations
+
+Prisma will warn about destructive changes. Take the warning seriously and confirm with the user before proceeding.
+
+| Operation                                                | Safety                              | What to do                                                                                       |
+| -------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Add a nullable column                                    | Safe                                | Just edit + migrate.                                                                             |
+| Add a non-null column **with a default**                 | Safe                                | Just edit + migrate.                                                                             |
+| Add a non-null column **without a default** to a non-empty table | Unsafe                              | Two-step: add nullable → backfill → set non-null in a follow-up migration.                       |
+| Drop a column                                            | Destructive                         | Confirm intent. Lost data is unrecoverable.                                                      |
+| Rename a column or model                                 | Looks like drop+add to Prisma       | Use `@map` / `@@map` to keep DB names stable, OR write a custom SQL `ALTER ... RENAME` migration. See "renames" below. |
+| Change a column type                                     | Often destructive                   | Prisma may generate a drop+add. Inspect the SQL; if it would lose data, hand-edit the migration. |
+| Change `@unique` / index                                 | Safe but can fail on existing dupes | Verify no duplicate data first.                                                                  |
+| Add a relation                                           | Safe schema-side                    | Make sure the FK column nullability is what you actually want.                                   |
+| Remove an enum value                                     | Destructive                         | Existing rows holding that value will fail. Migrate the data first.                              |
+
+## Renames — don't rely on autogeneration
+
+`prisma migrate dev` cannot tell a rename from a drop+add and will generate `DROP COLUMN ...; ADD COLUMN ...;` — losing data. Two safe approaches:
+
+- **Keep the DB name stable, change only the Prisma name** with `@map` / `@@map`:
+
+  ```prisma
+  model User {
+    id          String @id @default(uuid())
+    displayName String @map("name")
+  }
+  ```
+
+  This produces no SQL change.
+
+- **Actually rename the column / table** with a hand-written migration: run `prisma migrate dev --create-only --name rename-name-to-display-name`, then replace the autogenerated SQL with `ALTER TABLE "User" RENAME COLUMN "name" TO "displayName";`, then `prisma migrate dev` to apply it.
+
+## Production deploy
+
+`prisma migrate dev` is for **dev only** — it can reset the DB. For production / CI, use:
+
+```
+npm run prisma:deploy   # = prisma migrate deploy
+```
+
+This applies pending migrations without prompts and never resets. It's what should run in CI/CD before the app starts.
+
+## When migrations get stuck
+
+Common situations:
+
+- **"Drift detected"** — the dev DB has changes the migration history doesn't know about. Don't blow away the DB by reflex; first ask the user whether the divergent state is real work that needs to be captured. If it's safe to discard, `npm run db:reset` (= `prisma migrate reset`) wipes and re-applies. **Confirm with the user before running reset.**
+- **A migration fails partway through** — Prisma marks it as failed. Fix the SQL in the migration file, then `prisma migrate resolve --rolled-back <migration>` (only if the failed steps actually rolled back) and re-run `prisma migrate dev`. If you're unsure, ask the user.
+- **You need to change a migration that's already been applied locally** — only safe if it has not been applied anywhere else (CI, teammates, prod). Otherwise create a new migration that fixes things forward.
+
+## Schema conventions for this repo
+
+- IDs default to `String @id @default(uuid())` in existing models — match that unless the user wants otherwise.
+- Timestamps: `createdAt DateTime @default(now())`, `updatedAt DateTime @updatedAt`.
+- Soft deletes: not used currently. Don't introduce `deletedAt` unless the user asks.
+- Enums in the schema, not stringly-typed.
+- Relations: name the FK field `<relation>Id` and the relation field `<relation>` (Prisma convention).
+- Use `@@index([...])` for queries you've actually shown will exist. Don't speculatively index.
+
+## Error-mapping coordination
+
+The global filter (`src/common/filters/all-exceptions.filter.ts → resolvePrismaKnown`) maps:
+
+- `P2002` (unique constraint) → 409 Conflict
+- `P2025` (record not found) → 404 Not Found
+- `P2003` (FK constraint) → 400 Bad Request
+
+If your schema change introduces a constraint whose Prisma error code isn't yet mapped, extend `resolvePrismaKnown` so the API returns a sensible status. Don't catch these at the service layer just to remap them — let the global filter do it.
+
+## Verification checklist before declaring done
+
+- [ ] `prisma/schema.prisma` change is intentional and minimal.
+- [ ] A new migration file exists under `prisma/migrations/<timestamp>_<name>/migration.sql`.
+- [ ] You **read** the SQL and it does what you expect.
+- [ ] No autogenerated `DROP COLUMN ... ADD COLUMN ...` for what was meant to be a rename.
+- [ ] The Prisma client regenerated (it does automatically with `prisma migrate dev`); types compile.
+- [ ] `npm run build` and `npm test` pass.
+- [ ] If the change has runtime implications (e.g. new required field), call sites and DTOs were updated — consider invoking `/back-add-feature` for the consumer changes and `/back-swagger-docs` for the docs.
+
+## Don'ts
+
+- Don't run `prisma migrate reset` or `db:reset` without explicit user confirmation — it wipes the dev database.
+- Don't edit a migration that's already been applied to a shared environment.
+- Don't introduce `prisma db push` workflows here — this project uses migrations for a reason (audit trail, prod parity).
+- Don't bypass migrations by writing raw SQL in app code.
+- Don't introduce a second ORM. Prisma is the only data layer.

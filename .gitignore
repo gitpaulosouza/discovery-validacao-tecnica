@@ -1,0 +1,34 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Logs
+*.log
+
+# Local env (belt-and-braces — subprojects also ignore these)
+.env
+.env.local
+.env.*.local
+
+# Build & deps (belt-and-braces)
+node_modules/
+dist/
+.next/
+
+# Local DB
+*.db
+*.db-journal
+
+# Security Gate (Trivy)
+.security/
+/bin/trivy
+/bin/trivy.exe
+*.sarif

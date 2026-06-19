@@ -1,0 +1,125 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@config "../../tailwind.config.ts";
+
+/* ── Loomi CSS variables ────────────────────────────────────── */
+@layer base {
+  :root {
+    --background:          oklch(1 0 0);
+    --foreground:          oklch(0.145 0 0);
+    --card:                oklch(1 0 0);
+    --card-foreground:     oklch(0.145 0 0);
+    --popover:             oklch(1 0 0);
+    --popover-foreground:  oklch(0.145 0 0);
+    --primary:             oklch(0.40 0.235 288);   /* #5b2dc4 */
+    --primary-foreground:  oklch(1 0 0);
+    --secondary:           oklch(0.97 0 0);
+    --secondary-foreground:oklch(0.205 0 0);
+    --muted:               oklch(0.97 0 0);
+    --muted-foreground:    oklch(0.53 0 0);
+    --accent:              oklch(0.97 0 0);
+    --accent-foreground:   oklch(0.205 0 0);
+    --destructive:         oklch(0.577 0.245 27.325);
+    --border:              oklch(0.918 0 0);
+    --input:               oklch(0.918 0 0);
+    --ring:                oklch(0.40 0.235 288);
+    --radius:              0.75rem;
+    /* Sidebar — always dark */
+    --sidebar:             oklch(0.11 0 0);
+    --sidebar-foreground:  oklch(0.985 0 0);
+    --sidebar-primary:     oklch(0.40 0.235 288);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent:      oklch(0.17 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border:      oklch(0.22 0 0);
+    --sidebar-ring:        oklch(0.40 0.235 288);
+  }
+
+  .dark {
+    --background:          oklch(0.145 0 0);
+    --foreground:          oklch(0.985 0 0);
+    --card:                oklch(0.205 0 0);
+    --card-foreground:     oklch(0.985 0 0);
+    --primary:             oklch(0.40 0.235 288);
+    --primary-foreground:  oklch(1 0 0);
+    --secondary:           oklch(0.269 0 0);
+    --secondary-foreground:oklch(0.985 0 0);
+    --muted:               oklch(0.269 0 0);
+    --muted-foreground:    oklch(0.708 0 0);
+    --border:              oklch(1 0 0 / 10%);
+    --input:               oklch(1 0 0 / 15%);
+    --ring:                oklch(0.40 0.235 288);
+  }
+
+  * { border-color: var(--border); }
+
+  html   { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-open-sans), sans-serif;
+    background-color: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-instrument), sans-serif;
+  }
+
+  code, pre, kbd {
+    font-family: var(--font-jetbrains), monospace;
+  }
+
+  ::selection {
+    background-color: #5b2dc4;
+    color: #fff;
+  }
+
+  aside::-webkit-scrollbar         { width: 3px; }
+  aside::-webkit-scrollbar-track   { background: transparent; }
+  aside::-webkit-scrollbar-thumb   { border-radius: 9999px; background: oklch(0.30 0 0); }
+}
+
+/* ── Tailwind v4 theme — maps CSS vars to utilities ─────────── */
+@theme inline {
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-ring:                 var(--ring);
+  /* Brand */
+  --color-brand-purple: #5b2dc4;
+  --color-brand-pink:   #ff3399;
+  --color-brand-dark:   #171717;
+  /* Fonts */
+  --font-display: var(--font-instrument), sans-serif;
+  --font-body:    var(--font-open-sans), sans-serif;
+  --font-mono:    var(--font-jetbrains), monospace;
+  /* Animations */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.3s ease-out both;
+}

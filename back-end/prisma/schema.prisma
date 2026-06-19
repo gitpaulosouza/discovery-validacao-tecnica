@@ -1,0 +1,39 @@
+// Prisma schema. See https://www.prisma.io/docs/concepts/components/prisma-schema
+// After editing this file, run:
+//   npx prisma generate         # regenerate the typed client
+//   npx prisma migrate dev      # create and apply a development migration
+//
+// Datasource is SQLite for zero-setup local development. The DB file lives at
+// prisma/dev.db by default (see .env.example). For production swap the
+// provider/url and rerun migrations.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String?
+  password      String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
