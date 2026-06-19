@@ -1,7 +1,8 @@
 # Claude Code — monorepo guide
 
-This is a fullstack template intended for **fully-local, low-footprint
-development**. There is no Postgres, no Docker, no cloud service required.
+This is the **hacka** project — a fullstack app for **fully-local, low-footprint
+development** (generated from loomi/claudecode-local-project-template). There is
+no Postgres, no Docker, no cloud service required.
 Read this file before making non-trivial changes — it applies to *both*
 subprojects (`back-end/` and `front-end/`).
 

@@ -1,9 +1,11 @@
-# Claude Code Local Project Template
+# hacka
 
-Fullstack monorepo template **100% local** — sem Postgres, sem Docker, sem
+Projeto fullstack **100% local** — sem Postgres, sem Docker, sem
 serviços hospedados. Roda em laptops modestos. Pensado para *vibe-coding*
 com [Claude Code](https://claude.com/claude-code): um único `make setup`
 deixa back-end e front-end prontos.
+
+> Gerado a partir do [loomi/claudecode-local-project-template](https://github.com/loomi/claudecode-local-project-template).
 
 - **Back-end:** NestJS 11 + Prisma + **SQLite** + Swagger + JWT
 - **Front-end:** Next.js 15 (App Router) + TypeScript strict + Tailwind v4 + TanStack Query
