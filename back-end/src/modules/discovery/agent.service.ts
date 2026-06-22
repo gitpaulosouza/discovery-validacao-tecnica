@@ -30,6 +30,9 @@ const COMPLIANCE_TERMS = ['lgpd', 'saúde', 'financeiro', 'pci', 'banco'];
 // Cap transcript so the prompt stays well within the 8 s timeout budget
 const MAX_TRANSCRIPT_CHARS = 3_000;
 
+const BASE_EFFORT_MIN_WEEKS = 4;
+const BASE_EFFORT_MAX_WEEKS = 8;
+
 export function computeSeverity(lead: LeadInput): 'S1' | 'S2' | 'S3' {
   const text = [lead.painPoint, lead.transcript, lead.mentionedStack]
     .filter(Boolean)
@@ -102,8 +105,8 @@ export function analyzeDeterministic(
 
   // Effort
   const keywordCount = extractedNfrs.length;
-  const effortMinWeeks = 4 + keywordCount * 2;
-  const effortMaxWeeks = 8 + keywordCount * 2;
+  const effortMinWeeks = BASE_EFFORT_MIN_WEEKS + keywordCount * 2;
+  const effortMaxWeeks = BASE_EFFORT_MAX_WEEKS + keywordCount * 2;
 
   // Risk scores
   const risks: RiskItem[] = [];
@@ -192,35 +195,61 @@ export function analyzeDeterministic(
   };
 }
 
-function parseClaudeResult(input: unknown): AnalysisResult {
+function parseClaudeResult(input: unknown, logger: Logger): AnalysisResult {
   if (!input || typeof input !== 'object') {
     throw new Error('Claude tool input is not an object');
   }
   const raw = input as Record<string, unknown>;
+  const degraded: string[] = [];
 
   const extractedNfrs = Array.isArray(raw.extractedNfrs)
     ? raw.extractedNfrs.filter((x): x is string => typeof x === 'string')
     : [];
+  if (!Array.isArray(raw.extractedNfrs)) degraded.push('extractedNfrs');
+
   const effortMinWeeks =
-    typeof raw.effortMinWeeks === 'number' ? raw.effortMinWeeks : 4;
+    typeof raw.effortMinWeeks === 'number'
+      ? raw.effortMinWeeks
+      : BASE_EFFORT_MIN_WEEKS;
+  if (typeof raw.effortMinWeeks !== 'number') degraded.push('effortMinWeeks');
+
   const effortMaxWeeks =
-    typeof raw.effortMaxWeeks === 'number' ? raw.effortMaxWeeks : 8;
+    typeof raw.effortMaxWeeks === 'number'
+      ? raw.effortMaxWeeks
+      : BASE_EFFORT_MAX_WEEKS;
+  if (typeof raw.effortMaxWeeks !== 'number') degraded.push('effortMaxWeeks');
+
   const confidenceNote =
     typeof raw.confidenceNote === 'string' ? raw.confidenceNote : '';
+  if (typeof raw.confidenceNote !== 'string') degraded.push('confidenceNote');
+
   const riskScore =
     typeof raw.riskScore === 'number'
       ? Math.min(100, Math.max(0, raw.riskScore))
       : 0;
+  if (typeof raw.riskScore !== 'number') degraded.push('riskScore');
+
   const topRisks = Array.isArray(raw.topRisks)
     ? raw.topRisks.filter((x): x is string => typeof x === 'string').slice(0, 3)
     : [];
+  if (!Array.isArray(raw.topRisks)) degraded.push('topRisks');
+
   const suggestedSkills = Array.isArray(raw.suggestedSkills)
     ? raw.suggestedSkills.filter((x): x is string => typeof x === 'string')
     : [];
+  if (!Array.isArray(raw.suggestedSkills)) degraded.push('suggestedSkills');
+
   const suggestedSeniority =
     typeof raw.suggestedSeniority === 'string'
       ? raw.suggestedSeniority
       : 'Pleno';
+  if (typeof raw.suggestedSeniority !== 'string') degraded.push('suggestedSeniority');
+
+  if (degraded.length > 0) {
+    logger.warn(
+      `Claude returned unexpected field types — applied defaults for: ${degraded.join(', ')}`,
+    );
+  }
 
   return {
     extractedNfrs,
@@ -266,7 +295,9 @@ export class AgentService {
     severity: 'S1' | 'S2' | 'S3',
   ): Promise<AnalysisResult> {
     const transcript = lead.transcript
-      ? lead.transcript.slice(0, MAX_TRANSCRIPT_CHARS)
+      ? (lead.transcript.length > MAX_TRANSCRIPT_CHARS
+          ? lead.transcript.slice(0, MAX_TRANSCRIPT_CHARS)
+          : lead.transcript)
       : null;
 
     const prompt = `Você é um assistente técnico especializado em pré-venda de software.
@@ -355,6 +386,6 @@ Instrução: extraia NFRs implícitos que o vendedor pode não ter notado explic
       throw new Error('Claude did not return tool_use block');
     }
 
-    return parseClaudeResult(toolUse.input);
+    return parseClaudeResult(toolUse.input, this.logger);
   }
 }
