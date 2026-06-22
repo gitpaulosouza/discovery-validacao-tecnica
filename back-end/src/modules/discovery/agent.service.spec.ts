@@ -1,4 +1,6 @@
+import { ConfigService } from '@nestjs/config';
 import {
+  AgentService,
   computeSeverity,
   analyzeDeterministic,
   LeadInput,
@@ -223,5 +225,33 @@ describe('analyzeDeterministic', () => {
       'S1',
     );
     expect(result.topRisks.length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('AgentService.analyze — fallback determinístico (sem chave)', () => {
+  let service: AgentService;
+
+  beforeEach(() => {
+    const configMock = { get: () => '' } as unknown as ConfigService;
+    service = new AgentService(configMock);
+  });
+
+  it('retorna resultado via fallback quando não há chave de API', async () => {
+    const lead: LeadInput = {
+      painPoint: 'sistema LGPD para banco digital',
+      budget: 400_000,
+      declaredDeadline: '3 semanas',
+      transcript: null,
+      mentionedStack: null,
+      decisorName: null,
+    };
+    const severity = computeSeverity(lead);
+    expect(severity).toBe('S1');
+
+    const result = await service.analyze(lead, severity);
+    expect(result.extractedNfrs.some((n) => /lgpd/i.test(n))).toBe(true);
+    expect(result.riskScore).toBeGreaterThan(50);
+    expect(result.effortMinWeeks).toBeGreaterThanOrEqual(4);
+    expect(result.topRisks.length).toBeGreaterThan(0);
   });
 });
