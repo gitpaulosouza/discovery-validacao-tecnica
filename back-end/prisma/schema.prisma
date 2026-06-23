@@ -37,3 +37,102 @@ model RefreshToken {
 
   @@index([userId])
 }
+
+// --- Discovery & validação técnica (ver docs/discovery-module.md, seção 5) ---
+// Enums emulados com String + @IsIn no DTO (SQLite não tem enum nativo confiável).
+// Listas de string são tabelas-filhas normalizadas (sem Json), com `position` p/ ordem.
+
+model Lead {
+  id               String        @id @default(uuid())
+  clientName       String
+  painPoint        String
+  declaredDeadline String?
+  budget           Float?
+  mentionedStack   String?
+  decisorName      String?
+  transcript       String?
+  status           String        @default("PENDING_ANALYSIS") // PENDING_ANALYSIS | ANALYZED | DECIDED
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  analysis         LeadAnalysis?
+  decision         Decision?
+}
+
+model LeadAnalysis {
+  id                 String          @id @default(uuid())
+  leadId             String          @unique
+  lead               Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  severity           String
+  effortMinWeeks     Float
+  effortMaxWeeks     Float
+  confidenceNote     String
+  riskScore          Int
+  suggestedSeniority String
+  slaDeadlineAt      DateTime
+  createdAt          DateTime        @default(now())
+  extractedNfrs      AnalysisNfr[]
+  topRisks           AnalysisRisk[]
+  suggestedSkills    AnalysisSkill[]
+}
+
+model AnalysisNfr {
+  id         String       @id @default(uuid())
+  analysisId String
+  analysis   LeadAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  value      String
+  position   Int
+
+  @@index([analysisId])
+}
+
+model AnalysisRisk {
+  id         String       @id @default(uuid())
+  analysisId String
+  analysis   LeadAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  value      String
+  position   Int
+
+  @@index([analysisId])
+}
+
+model AnalysisSkill {
+  id         String       @id @default(uuid())
+  analysisId String
+  analysis   LeadAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  value      String
+  position   Int
+
+  @@index([analysisId])
+}
+
+model Person {
+  id        String        @id @default(uuid())
+  name      String
+  role      String
+  seniority String
+  available Boolean       @default(true)
+  skills    PersonSkill[]
+}
+
+model PersonSkill {
+  id       String @id @default(uuid())
+  personId String
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  value    String
+
+  @@unique([personId, value])
+  @@index([personId])
+}
+
+model Decision {
+  id              String   @id @default(uuid())
+  leadId          String   @unique
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type            String
+  deciderName     String
+  remediationNote String?
+  recycleReason   String?
+  killReason      String?
+  killTag         String?
+  createdAt       DateTime @default(now())
+}
