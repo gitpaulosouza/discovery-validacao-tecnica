@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import { useCreateLead } from '@/features/discovery/hooks/useCreateLead'
-import { ApiError } from '@/lib/api'
+import { apiErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const PAIN_POINT_MAX = 2000
@@ -29,7 +29,7 @@ const TRANSCRIPT_MAX = 20000
 const brl = new Intl.NumberFormat('pt-BR')
 
 /** Keep only digits, render as pt-BR grouped thousands. '' stays empty. */
-function formatBudget(raw: string): string {
+function maskBudgetInput(raw: string): string {
   const digits = raw.replace(/\D/g, '')
   if (!digits) return ''
   return brl.format(Number(digits))
@@ -75,17 +75,15 @@ export default function IntakePage() {
     )
   }
 
-  const errorMessage =
-    create.error instanceof ApiError
-      ? create.error.message
-      : create.error
-        ? 'Não foi possível registrar o lead. Tente novamente.'
-        : null
+  const errorMessage = apiErrorMessage(
+    create.error,
+    'Não foi possível registrar o lead. Tente novamente.',
+  )
 
   const canSubmit = clientName.trim().length > 0 && painPoint.trim().length > 0
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <header className="flex flex-col gap-3">
         <Link
           href="/discovery"
@@ -192,7 +190,7 @@ export default function IntakePage() {
                         inputMode="numeric"
                         className="pl-9 tabular-nums"
                         value={budget}
-                        onChange={(e) => setBudget(formatBudget(e.target.value))}
+                        onChange={(e) => setBudget(maskBudgetInput(e.target.value))}
                         placeholder="300.000"
                       />
                     </div>

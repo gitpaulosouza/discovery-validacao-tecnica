@@ -11,7 +11,7 @@ import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { useRegister } from '@/features/auth/hooks/useRegister'
 import { tokenStore } from '@/lib/token-store'
-import { ApiError } from '@/lib/api'
+import { apiErrorMessage } from '@/lib/api'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -22,7 +22,7 @@ export default function SignUpPage() {
   const register = useRegister()
 
   useEffect(() => {
-    if (tokenStore.getAccess()) router.replace('/account')
+    if (tokenStore.getAccess()) router.replace('/discovery')
   }, [router])
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -30,17 +30,15 @@ export default function SignUpPage() {
     register.mutate(
       { name: name || undefined, email, password },
       {
-        onSuccess: () => router.replace('/account'),
+        onSuccess: () => router.replace('/discovery'),
       },
     )
   }
 
-  const errorMessage =
-    register.error instanceof ApiError
-      ? register.error.message
-      : register.error
-        ? 'Não foi possível criar a conta. Tente novamente.'
-        : null
+  const errorMessage = apiErrorMessage(
+    register.error,
+    'Não foi possível criar a conta. Tente novamente.',
+  )
 
   return (
     <Card className="border-border/60 shadow-xl ring-1 ring-foreground/5">

@@ -30,6 +30,11 @@ export class ApiError extends Error {
   }
 }
 
+export function apiErrorMessage(error: unknown, fallback: string): string | null {
+  if (error instanceof ApiError) return error.message
+  return error ? fallback : null
+}
+
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
   auth?: boolean

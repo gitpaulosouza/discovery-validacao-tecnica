@@ -13,7 +13,9 @@ import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { useDeleteUser } from '@/features/users/hooks/useDeleteUser'
 import { useUpdateUser } from '@/features/users/hooks/useUpdateUser'
 import { useUserProfile } from '@/features/users/hooks/useUserProfile'
-import { ApiError } from '@/lib/api'
+import { apiErrorMessage } from '@/lib/api'
+
+const memberSince = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' })
 
 export default function AccountPage() {
   const router = useRouter()
@@ -94,13 +96,11 @@ export default function AccountPage() {
     })
   }
 
-  const updateError =
-    update.error instanceof ApiError ? update.error.message : update.error ? 'Não foi possível salvar.' : null
-  const deleteError =
-    remove.error instanceof ApiError ? remove.error.message : remove.error ? 'Não foi possível excluir a conta.' : null
+  const updateError = apiErrorMessage(update.error, 'Não foi possível salvar.')
+  const deleteError = apiErrorMessage(remove.error, 'Não foi possível excluir a conta.')
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <header className="flex flex-col gap-2">
         <Badge className="w-fit border-0 bg-primary/10 text-primary hover:bg-primary/15">
           Sua conta
@@ -144,7 +144,7 @@ export default function AccountPage() {
               <ProfileRow
                 icon={<ShieldCheck className="size-4" />}
                 label="Membro desde"
-                value={new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(user.createdAt))}
+                value={memberSince.format(new Date(user.createdAt))}
               />
             </dl>
           ) : (

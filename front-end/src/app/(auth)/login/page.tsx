@@ -11,7 +11,7 @@ import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { useLogin } from '@/features/auth/hooks/useLogin'
 import { tokenStore } from '@/lib/token-store'
-import { ApiError } from '@/lib/api'
+import { apiErrorMessage } from '@/lib/api'
 
 export default function SignInPage() {
   return (
@@ -34,7 +34,7 @@ function SignInSkeleton() {
 function SignInForm() {
   const router = useRouter()
   const params = useSearchParams()
-  const next = params.get('next') ?? '/account'
+  const next = params.get('next') ?? '/discovery'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -54,12 +54,10 @@ function SignInForm() {
     )
   }
 
-  const errorMessage =
-    login.error instanceof ApiError
-      ? login.error.message
-      : login.error
-        ? 'Não foi possível entrar. Tente novamente.'
-        : null
+  const errorMessage = apiErrorMessage(
+    login.error,
+    'Não foi possível entrar. Tente novamente.',
+  )
 
   return (
     <Card className="border-border/60 shadow-xl ring-1 ring-foreground/5">

@@ -12,6 +12,15 @@ export interface CreateLeadPayload {
   transcript?: string
 }
 
+export interface DecideLeadPayload {
+  type: DecisionType
+  deciderName: string
+  remediationNote?: string
+  recycleReason?: string
+  killReason?: string
+  killTag?: string
+}
+
 export interface LeadSummary {
   id: string
   clientName: string
