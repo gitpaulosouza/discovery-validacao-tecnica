@@ -1,0 +1,1097 @@
+<title>Painel de Análise</title>
+<style>
+  :root {
+    --ground: #EAEDF2;
+    --surface: #FFFFFF;
+    --text: #1A2130;
+    --muted: #5C677A;
+    --faint: #8A93A6;
+    --line: #D5DAE3;
+    --accent: #4B3FD6;
+    --accent-soft: #ECEAFB;
+    --agent: #138A82;
+    --agent-soft: #E2F2F0;
+    --edit: #B26A00;
+    --edit-soft: #FBEFD9;
+    --s1: #D6453F;
+    --s1-soft: #FBECE9;
+    --s2: #C8841A;
+    --s2-soft: #FBF0DD;
+    --s3: #6B7588;
+    --s3-soft: #EBEEF2;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius: 10px;
+    --shadow: 0 1px 2px rgba(26,33,48,.06), 0 8px 24px rgba(26,33,48,.06);
+  }
+  * { box-sizing: border-box; }
+  .ap {
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 28px clamp(16px, 4vw, 56px) 90px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .ap-wrap { max-width: 1180px; margin: 0 auto; }
+
+  /* breadcrumb / mock note */
+  .ap-crumb {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 0 0 16px;
+  }
+  .ap-crumb b { color: var(--accent); }
+
+  /* ---------- lead header ---------- */
+  .ap-head {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px 28px;
+    margin-bottom: 22px;
+  }
+  .ap-head .ap-client { flex: 1 1 240px; }
+  .ap-client h1 { font-size: clamp(22px, 3vw, 30px); font-weight: 700; letter-spacing: -.02em; margin: 0; }
+  .ap-client p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+  .ap-sevbadge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-weight: 700; font-size: 15px;
+    padding: 8px 14px; border-radius: 10px;
+  }
+  .sev-s1 { background: var(--s1-soft); color: var(--s1); }
+  .sev-s2 { background: var(--s2-soft); color: var(--s2); }
+  .sev-s3 { background: var(--s3-soft); color: var(--s3); }
+  .ap-sevbadge small { font-family: var(--sans); font-weight: 500; font-size: 11px; opacity: .8; }
+
+  .ap-sla { text-align: right; }
+  .ap-sla .ap-sla-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); font-family: var(--mono); }
+  .ap-sla .ap-sla-clock { font-family: var(--mono); font-size: 24px; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+  .ap-sla .ap-sla-clock.urgent { color: var(--s1); }
+
+  .ap-confirm {
+    font-family: var(--sans); font-size: 14px; font-weight: 600;
+    border: 1px solid var(--accent); background: var(--accent); color: #fff;
+    border-radius: 9px; padding: 11px 18px; cursor: pointer;
+  }
+  .ap-confirm.done { background: var(--agent); border-color: var(--agent); }
+  .ap-confirm:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+  .ap-validated-banner {
+    display: none;
+    align-items: center; gap: 10px;
+    background: var(--agent-soft); border: 1px solid #BFE0DC; color: #0E6B64;
+    border-radius: 10px; padding: 11px 16px; font-size: 13.5px; margin-bottom: 22px;
+  }
+  .ap-validated-banner.show { display: flex; }
+
+  /* agent notification: return to client */
+  .ap-return {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--agent-soft); border: 1px solid #BFE0DC; border-left: 4px solid var(--agent);
+    border-radius: 10px; padding: 14px 18px; margin-bottom: 22px;
+  }
+  .ap-return-ic { width: 40px; height: 40px; border-radius: 10px; background: #fff; color: var(--agent); display: flex; align-items: center; justify-content: center; font-size: 20px; flex: none; }
+  .ap-return-main { flex: 1; }
+  .ap-return-main b { font-size: 15px; color: #0E6B64; }
+  .ap-return-main b span { border-bottom: 2px solid var(--agent); }
+  .ap-return-main p { margin: 3px 0 0; font-size: 12.5px; color: #2C5C58; }
+  .ap-return-btn { flex: none; font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--agent); background: #fff; border: 1px solid var(--agent); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  .ap-return-btn:hover { background: var(--agent); color: #fff; }
+
+  /* fast-track banner */
+  .ap-fast {
+    display: none;
+    align-items: center; gap: 10px;
+    background: var(--s3-soft); border: 1px solid #C7CDD6; color: var(--s3);
+    border-radius: 10px; padding: 11px 16px; font-size: 13.5px; margin-bottom: 22px;
+  }
+  .ap-fast.show { display: flex; }
+
+  /* ---------- section shell ---------- */
+  .ap-sec { margin-bottom: 26px; }
+  .ap-sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .ap-sec-num { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 600; }
+  .ap-sec-title { font-size: 17px; font-weight: 650; letter-spacing: -.01em; margin: 0; }
+  .ap-sec-note { font-size: 13px; color: var(--muted); margin: 2px 0 0; }
+
+  .ap-card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: var(--shadow); padding: 4px 20px 8px;
+  }
+
+  /* block = an editable agent suggestion */
+  .ap-blk { padding: 16px 0; border-bottom: 1px dashed var(--line); }
+  .ap-blk:last-child { border-bottom: 0; }
+  .ap-blk-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .ap-blk-title { font-size: 13px; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-family: var(--mono); }
+
+  .ap-src {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 6px; font-weight: 600; white-space: nowrap;
+  }
+  .src-agent { background: var(--agent-soft); color: var(--agent); }
+  .src-edit { background: var(--edit-soft); color: var(--edit); }
+
+  .ap-hint { font-size: 12.5px; color: var(--faint); margin-left: auto; }
+
+  /* inputs */
+  .ap-in, .ap-area, .ap-num {
+    font-family: var(--sans); font-size: 14px; color: var(--text);
+    background: #FBFCFE; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
+  }
+  .ap-in { width: 100%; }
+  .ap-area { width: 100%; resize: vertical; min-height: 60px; }
+  .ap-num { width: 84px; text-align: center; }
+  .ap-in:focus, .ap-area:focus, .ap-num:focus {
+    outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  /* severity segmented */
+  .ap-seg { display: inline-flex; gap: 6px; }
+  .ap-seg button {
+    font-family: var(--mono); font-weight: 600; font-size: 14px;
+    border: 1px solid var(--line); background: #FBFCFE; color: var(--muted);
+    border-radius: 8px; padding: 8px 16px; cursor: pointer;
+  }
+  .ap-seg button[aria-pressed="true"].s1 { background: var(--s1-soft); color: var(--s1); border-color: var(--s1); }
+  .ap-seg button[aria-pressed="true"].s2 { background: var(--s2-soft); color: var(--s2); border-color: var(--s2); }
+  .ap-seg button[aria-pressed="true"].s3 { background: var(--s3-soft); color: var(--s3); border-color: var(--s3); }
+
+  /* NFR list */
+  .ap-nfr { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .ap-nfr .ap-in { flex: 1; }
+  .ap-hidden-tag {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
+    background: var(--s1-soft); color: var(--s1); padding: 4px 8px; border-radius: 6px; font-weight: 700; white-space: nowrap;
+  }
+  .ap-x {
+    flex: none; width: 30px; height: 30px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--line); background: none; color: var(--faint); font-size: 16px; line-height: 1;
+  }
+  .ap-x:hover { color: var(--s1); border-color: var(--s1); background: var(--s1-soft); }
+  .ap-addrow {
+    font-family: var(--mono); font-size: 13px; color: var(--accent);
+    background: none; border: 1px dashed var(--accent); border-radius: 8px; padding: 8px 12px; cursor: pointer; margin-top: 4px;
+  }
+  .ap-addrow:hover { background: var(--accent-soft); }
+
+  /* effort + risk row */
+  .ap-effort { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+  .ap-riskbar { height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 8px; }
+  .ap-riskbar span { display: block; height: 100%; background: var(--s1); border-radius: 99px; transition: width .3s ease; }
+  .ap-risknum { font-family: var(--mono); font-size: 22px; font-weight: 700; }
+
+  /* squad */
+  .ap-squad { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .ap-person { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: #FBFCFE; position: relative; }
+  .ap-person b { font-size: 14px; }
+  .ap-person .ap-role { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .ap-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .ap-chip { font-family: var(--mono); font-size: 10.5px; background: var(--accent-soft); color: var(--accent); padding: 3px 7px; border-radius: 5px; }
+
+  /* routing */
+  .ap-route { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .ap-route-ic { width: 42px; height: 42px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 20px; flex: none; }
+  .ap-route-main b { font-size: 16px; }
+  .ap-route-main p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+  .ap-route-mode { margin-left: auto; font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 5px 10px; border-radius: 7px; font-weight: 600; }
+  .mode-block { background: var(--s1-soft); color: var(--s1); }
+  .mode-consult { background: var(--s3-soft); color: var(--s3); }
+
+  /* deal desk */
+  .ap-deal-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  @media (max-width: 620px) { .ap-deal-btns { grid-template-columns: repeat(2, 1fr); } }
+  .ap-deal-btns button {
+    font-family: var(--sans); font-weight: 650; font-size: 15px; cursor: pointer;
+    border-radius: 10px; padding: 16px 10px; border: 1.5px solid var(--line); background: #FBFCFE; color: var(--text);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .ap-deal-btns button small { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; }
+  .ap-deal-btns button.go[aria-pressed="true"]        { border-color: var(--agent); background: var(--agent-soft); color: var(--agent); }
+  .ap-deal-btns button.cond[aria-pressed="true"]      { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .ap-deal-btns button.recy[aria-pressed="true"]      { border-color: var(--s2); background: var(--s2-soft); color: var(--s2); }
+  .ap-deal-btns button.kill[aria-pressed="true"]      { border-color: var(--s1); background: var(--s1-soft); color: var(--s1); }
+
+  .ap-deal-extra { display: none; padding-top: 4px; }
+  .ap-deal-extra.show { display: block; }
+  .ap-fieldlabel { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 12px 0 6px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .05em; }
+  .ap-select { width: 100%; font-family: var(--sans); font-size: 14px; background: #FBFCFE; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
+
+  .ap-register {
+    margin-top: 18px; width: 100%; font-family: var(--sans); font-size: 15px; font-weight: 650; cursor: pointer;
+    border: 0; border-radius: 10px; padding: 13px; background: var(--text); color: #fff;
+  }
+  .ap-register:disabled { opacity: .4; cursor: not-allowed; }
+
+  .ap-decided { display: none; align-items: center; gap: 10px; margin-top: 16px; background: var(--agent-soft); border: 1px solid #BFE0DC; color: #0E6B64; border-radius: 10px; padding: 12px 16px; font-size: 14px; }
+  .ap-decided.show { display: flex; }
+
+  .ap-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--text); color: #fff; padding: 11px 18px; border-radius: 9px; font-size: 14px;
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 30;
+  }
+  .ap-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- form review ---------- */
+  .ap-review { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px 20px; }
+  .ap-rev-item.full { grid-column: 1 / -1; }
+  .ap-rev-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin-bottom: 3px; }
+  .ap-rev-v { font-size: 14px; color: var(--text); white-space: pre-wrap; }
+  .ap-rev-v.empty { color: var(--faint); font-style: italic; }
+  .ap-rev-file { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; background: #FBFCFE; border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; margin-top: 2px; }
+  .ap-collapse-btn { font-family: var(--mono); font-size: 12px; color: var(--accent); background: none; border: 0; cursor: pointer; padding: 0; }
+
+  /* ---------- features go/no-go ---------- */
+  .ap-feat { padding: 16px 0; border-bottom: 1px dashed var(--line); }
+  .ap-feat:last-child { border-bottom: 0; }
+  .ap-feat-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .ap-feat-name { font-weight: 600; font-size: 14px; flex: 1 1 200px; }
+  .ap-prio { font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; padding: 3px 7px; border-radius: 6px; font-weight: 600; background: var(--accent-soft); color: var(--accent); }
+  .ap-gng { display: inline-flex; gap: 6px; flex: none; }
+  .ap-gng button {
+    font-family: var(--mono); font-weight: 700; font-size: 12px; cursor: pointer;
+    border: 1px solid var(--line); background: #FBFCFE; color: var(--muted);
+    border-radius: 8px; padding: 7px 13px;
+  }
+  .ap-gng button.go[aria-pressed="true"] { background: var(--agent-soft); color: var(--agent); border-color: var(--agent); }
+  .ap-gng button.nogo[aria-pressed="true"] { background: var(--s1-soft); color: var(--s1); border-color: var(--s1); }
+  .ap-feat.isnogo { opacity: .62; }
+  .ap-feat-note { width: 100%; font-family: var(--sans); font-size: 13px; color: var(--text); background: #FBFCFE; border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px; resize: vertical; min-height: 44px; }
+  .ap-feat-note:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-soft); }
+  .ap-feat-notelabel { font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); margin-bottom: 5px; display: block; }
+
+  /* ---------- proposal docs ---------- */
+  .ap-doc-tabs { display: flex; gap: 8px; margin: 4px 0 16px; flex-wrap: wrap; }
+  .ap-doc-tab { font-family: var(--sans); font-size: 13.5px; font-weight: 600; cursor: pointer; border: 1px solid var(--line); background: #FBFCFE; color: var(--muted); border-radius: 9px; padding: 9px 15px; }
+  .ap-doc-tab[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .ap-doc { display: none; }
+  .ap-doc.show { display: block; }
+  .ap-paper { border: 1px solid var(--line); border-radius: 10px; background: #FBFCFE; padding: 22px 24px; }
+  .ap-paper h3 { font-size: 17px; margin: 0 0 2px; letter-spacing: -.01em; }
+  .ap-paper .ap-paper-meta { font-family: var(--mono); font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 16px; }
+  .ap-paper h4 { font-family: var(--mono); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--accent); margin: 18px 0 7px; }
+  .ap-paper h4:first-of-type { margin-top: 0; }
+  .ap-paper p { font-size: 13.5px; margin: 0 0 8px; line-height: 1.55; }
+  .ap-paper ul { margin: 0 0 8px; padding-left: 18px; font-size: 13.5px; line-height: 1.6; }
+  .ap-paper li.out { color: var(--faint); text-decoration: line-through; }
+  .ap-paper .ap-paper-tag { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 6px; background: var(--s1-soft); color: var(--s1); }
+  .ap-doc-actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .ap-doc-copy { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--accent); background: #fff; border: 1px solid var(--accent); border-radius: 8px; padding: 9px 15px; cursor: pointer; }
+  .ap-doc-copy:hover { background: var(--accent-soft); }
+
+  /* ---------- AI chat assistant ---------- */
+  .ac-launch {
+    position: fixed; bottom: 22px; right: 22px; z-index: 40;
+    display: flex; align-items: center; gap: 9px;
+    font-family: var(--sans); font-size: 14px; font-weight: 650; color: #fff;
+    background: var(--agent); border: 0; border-radius: 99px; padding: 13px 20px 13px 16px;
+    cursor: pointer; box-shadow: 0 6px 20px rgba(19,138,130,.35);
+  }
+  .ac-launch .ac-spark { font-size: 17px; }
+  .ac-launch:hover { filter: brightness(1.05); }
+  .ac-launch.hidden { display: none; }
+
+  .ac-panel {
+    position: fixed; bottom: 22px; right: 22px; z-index: 50;
+    width: min(390px, calc(100vw - 32px));
+    height: min(600px, 80vh);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(26,33,48,.28);
+    display: none; flex-direction: column; overflow: hidden;
+  }
+  .ac-panel.show { display: flex; }
+  .ac-head {
+    background: var(--agent); color: #fff; padding: 14px 16px;
+    display: flex; align-items: center; gap: 11px;
+  }
+  .ac-head .ac-avatar { width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center; font-size: 17px; flex: none; }
+  .ac-head .ac-h-main { flex: 1; }
+  .ac-head b { font-size: 15px; display: block; }
+  .ac-head small { font-size: 11.5px; opacity: .85; }
+  .ac-close { background: none; border: 0; color: #fff; font-size: 24px; cursor: pointer; line-height: 1; opacity: .9; }
+  .ac-close:hover { opacity: 1; }
+
+  .ac-msgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--ground); }
+  .ac-msg { max-width: 85%; font-size: 13.5px; line-height: 1.5; padding: 10px 13px; border-radius: 12px; }
+  .ac-msg.agent { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .ac-msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+  .ac-msg b { font-weight: 650; }
+  .ac-typing { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; border-bottom-left-radius: 4px; padding: 12px 14px; display: none; }
+  .ac-typing.show { display: block; }
+  .ac-typing span { display: inline-block; width: 7px; height: 7px; margin: 0 2px; border-radius: 50%; background: var(--faint); animation: acblink 1.2s infinite both; }
+  .ac-typing span:nth-child(2) { animation-delay: .2s; }
+  .ac-typing span:nth-child(3) { animation-delay: .4s; }
+  @keyframes acblink { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+
+  .ac-chips { padding: 10px 12px 0; display: flex; flex-wrap: wrap; gap: 7px; background: var(--surface); border-top: 1px solid var(--line); }
+  .ac-chip { font-size: 12px; color: var(--agent); background: var(--agent-soft); border: 1px solid #BFE0DC; border-radius: 99px; padding: 6px 11px; cursor: pointer; }
+  .ac-chip:hover { background: var(--agent); color: #fff; }
+
+  .ac-input-row { display: flex; gap: 8px; padding: 12px; background: var(--surface); }
+  .ac-input { flex: 1; font-family: var(--sans); font-size: 13.5px; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; background: #FBFCFE; }
+  .ac-input:focus { outline: none; border-color: var(--agent); box-shadow: 0 0 0 3px var(--agent-soft); }
+  .ac-send { flex: none; background: var(--agent); color: #fff; border: 0; border-radius: 9px; padding: 0 15px; font-size: 16px; cursor: pointer; }
+  .ac-send:hover { filter: brightness(1.05); }
+
+  @media (prefers-reduced-motion: reduce) { *, .ac-typing span { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="ap">
+  <div class="ap-wrap">
+    <p class="ap-crumb">Loomi OS · Discovery · <b>Análise do lead</b></p>
+
+    <!-- lead header -->
+    <header class="ap-head">
+      <div class="ap-client">
+        <h1>Rede de Clínicas Vittá</h1>
+        <p>Assistente de IA para triagem e agendamento · recebido há 12 min</p>
+      </div>
+      <div class="ap-sevbadge sev-s1" id="sevBadge">S1 <small id="sevDesc">deal estratégico</small></div>
+      <div class="ap-sla">
+        <div class="ap-sla-label">SLA para decisão</div>
+        <div class="ap-sla-clock urgent" id="slaClock">24:00:00</div>
+      </div>
+      <button class="ap-confirm" id="confirmBtn" type="button">Confirmar análise</button>
+    </header>
+
+    <div class="ap-validated-banner" id="validatedBanner">
+      <span>&#10003;</span><span>Análise validada por você. Pronta para decisão no Deal Desk.</span>
+    </div>
+    <div class="ap-fast" id="fastBanner">
+      <span>&#9873;</span><span>Fast-track (S3): revisão consultiva, não bloqueia o avanço do deal.</span>
+    </div>
+
+    <!-- agent notification: return to client -->
+    <div class="ap-return" id="returnBanner">
+      <div class="ap-return-ic">&#9993;</div>
+      <div class="ap-return-main">
+        <b>Retorno ao cliente até <span id="returnWhen">—</span></b>
+        <p id="returnNote">O agente definiu este prazo a partir da severidade. É o compromisso a comunicar ao cliente sobre quando o time volta com um posicionamento.</p>
+      </div>
+      <button class="ap-return-btn" id="returnCopy" type="button">Copiar aviso</button>
+    </div>
+
+    <!-- 1. intake review -->
+    <section class="ap-sec">
+      <div class="ap-sec-head">
+        <span class="ap-sec-num">01</span>
+        <div>
+          <h2 class="ap-sec-title">Formulário enviado pelo Comercial</h2>
+          <p class="ap-sec-note">O que chegou no Intake. Confira contra a análise do agente. <button class="ap-collapse-btn" id="revToggle" type="button">ocultar</button></p>
+        </div>
+      </div>
+      <div class="ap-card" id="revCard">
+        <div class="ap-blk" style="border-bottom:0">
+          <div class="ap-review">
+            <div class="ap-rev-item"><div class="ap-rev-k">Cliente</div><div class="ap-rev-v">Rede de Clínicas Vittá</div></div>
+            <div class="ap-rev-item"><div class="ap-rev-k">Setor</div><div class="ap-rev-v">Saúde</div></div>
+            <div class="ap-rev-item"><div class="ap-rev-k">Cliente recorrente?</div><div class="ap-rev-v">Não</div></div>
+            <div class="ap-rev-item"><div class="ap-rev-k">Prazo que o cliente pediu</div><div class="ap-rev-v">8 semanas</div></div>
+            <div class="ap-rev-item"><div class="ap-rev-k">Orçamento (R$)</div><div class="ap-rev-v">280.000</div></div>
+            <div class="ap-rev-item"><div class="ap-rev-k">Stack mencionada</div><div class="ap-rev-v empty">não informada</div></div>
+            <div class="ap-rev-item"><div class="ap-rev-k">Decisor</div><div class="ap-rev-v empty">não informado</div></div>
+            <div class="ap-rev-item full"><div class="ap-rev-k">O que já foi prometido ao cliente</div><div class="ap-rev-v">Comercial indicou entrega antes de dezembro por ~R$ 280k.</div></div>
+            <div class="ap-rev-item full"><div class="ap-rev-k">Dor / pedido do cliente</div><div class="ap-rev-v">Rede de clínicas quer um assistente de IA que faça triagem inicial de sintomas, agende consultas sozinho e mande lembretes, integrado ao prontuário atual. Objetivo: reduzir custo de call center e parecer inovador. Prontuário atual é antigo e sem suporte. Precisa pronto antes da campanha de fim de ano. Jurídico preocupado com dados dos pacientes.</div></div>
+            <div class="ap-rev-item full"><div class="ap-rev-k">Transcript da call</div><div class="ap-rev-v">[trecho] ...no minuto 17 o cliente cita "a gente precisa de uns 99,9% de disponibilidade, tipo ANS"...</div></div>
+            <div class="ap-rev-item full"><div class="ap-rev-k">Anexos</div><div class="ap-rev-file">📎 apresentacao-comercial-vitta.pdf</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. agent recommendation -->
+    <section class="ap-sec">
+      <div class="ap-sec-head">
+        <span class="ap-sec-num">02</span>
+        <div>
+          <h2 class="ap-sec-title">Recomendação do agente</h2>
+          <p class="ap-sec-note">O agente já preencheu tudo abaixo a partir da dor e do transcript. Você revisa, ajusta o que discordar e confirma.</p>
+        </div>
+      </div>
+      <div class="ap-card">
+
+        <!-- severity -->
+        <div class="ap-blk" data-block="severity">
+          <div class="ap-blk-top">
+            <span class="ap-blk-title">Severidade</span>
+            <span class="ap-src src-agent" data-src>Sugerido pelo agente</span>
+            <span class="ap-hint">Trocar recalcula SLA e roteamento.</span>
+          </div>
+          <div class="ap-seg" id="sevSeg" role="group" aria-label="Severidade">
+            <button type="button" class="s1" data-sev="S1" aria-pressed="true">S1</button>
+            <button type="button" class="s2" data-sev="S2" aria-pressed="false">S2</button>
+            <button type="button" class="s3" data-sev="S3" aria-pressed="false">S3</button>
+          </div>
+          <p style="margin:10px 0 0;font-size:13px;color:var(--muted)" id="sevWhy">Gatilho: setor saúde + dados de pacientes (compliance). Prazo travado por marco de marketing.</p>
+        </div>
+
+        <!-- NFRs -->
+        <div class="ap-blk" data-block="nfr">
+          <div class="ap-blk-top">
+            <span class="ap-blk-title">NFRs extraídas</span>
+            <span class="ap-src src-agent" data-src>Sugerido pelo agente</span>
+            <span class="ap-hint">Requisitos não funcionais que o vendedor não listou.</span>
+          </div>
+          <div id="nfrList"></div>
+          <button class="ap-addrow" id="nfrAdd" type="button">+ Adicionar NFR</button>
+        </div>
+
+        <!-- effort -->
+        <div class="ap-blk" data-block="effort">
+          <div class="ap-blk-top">
+            <span class="ap-blk-title">Banda de esforço</span>
+            <span class="ap-src src-agent" data-src>Sugerido pelo agente</span>
+          </div>
+          <div class="ap-effort">
+            <input class="ap-num" id="effMin" type="number" min="0" value="10"> a
+            <input class="ap-num" id="effMax" type="number" min="0" value="16"> semanas
+            <span style="color:var(--faint);font-size:12.5px">· estimativa em banda, não ponto único</span>
+          </div>
+        </div>
+
+        <!-- risk -->
+        <div class="ap-blk" data-block="risk">
+          <div class="ap-blk-top">
+            <span class="ap-blk-title">Risco</span>
+            <span class="ap-src src-agent" data-src>Sugerido pelo agente</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <span class="ap-risknum" id="riskNum">78</span>
+            <span style="color:var(--muted);font-size:13px">/ 100</span>
+            <div style="flex:1"><div class="ap-riskbar"><span id="riskFill" style="width:78%"></span></div></div>
+            <input class="ap-num" id="riskInput" type="number" min="0" max="100" value="78">
+          </div>
+          <div id="riskList" style="margin-top:12px"></div>
+        </div>
+
+        <!-- squad -->
+        <div class="ap-blk" data-block="squad">
+          <div class="ap-blk-top">
+            <span class="ap-blk-title">Squad de execução sugerida</span>
+            <span class="ap-src src-agent" data-src>Sugerido pelo agente</span>
+            <span class="ap-hint">Quem tocaria a entrega (não é o aprovador).</span>
+          </div>
+          <div class="ap-squad" id="squad"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 3. scope by feature (go/no-go) -->
+    <section class="ap-sec">
+      <div class="ap-sec-head">
+        <span class="ap-sec-num">03</span>
+        <div>
+          <h2 class="ap-sec-title">Escopo por funcionalidade · go/no-go</h2>
+          <p class="ap-sec-note">O agente quebrou o pedido em funcionalidades e sugeriu go ou no-go em cada uma. Ajuste e justifique. Só as marcadas <b>go</b> entram na proposta.</p>
+        </div>
+      </div>
+      <div class="ap-card">
+        <div class="ap-blk" style="border-bottom:0" id="featList"></div>
+      </div>
+    </section>
+
+    <!-- 4. routing -->
+    <section class="ap-sec">
+      <div class="ap-sec-head">
+        <span class="ap-sec-num">04</span>
+        <div>
+          <h2 class="ap-sec-title">Roteamento</h2>
+          <p class="ap-sec-note">Para quem esta análise vai, definido pela severidade. Sugestão, sem travar por permissão.</p>
+        </div>
+      </div>
+      <div class="ap-card">
+        <div class="ap-blk" style="border-bottom:0">
+          <div class="ap-route">
+            <div class="ap-route-ic">&#8594;</div>
+            <div class="ap-route-main">
+              <b id="routeName">Comitê de Arquitetura + Head de Delivery</b>
+              <p id="routeDesc">Aprovação sênior obrigatória para deals estratégicos (S1).</p>
+            </div>
+            <span class="ap-route-mode mode-block" id="routeMode">Bloqueante</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. deal desk -->
+    <section class="ap-sec">
+      <div class="ap-sec-head">
+        <span class="ap-sec-num">05</span>
+        <div>
+          <h2 class="ap-sec-title">Deal Desk · decisão do lead</h2>
+          <p class="ap-sec-note">Decisão final do lead inteiro (além do go/no-go por funcionalidade). Sempre humana. Escolha uma das quatro e registre.</p>
+        </div>
+      </div>
+      <div class="ap-card">
+        <div class="ap-blk" style="border-bottom:0">
+          <div class="ap-deal-btns" id="dealBtns">
+            <button type="button" class="go"   data-dec="GO"          aria-pressed="false">Go<small>seguir</small></button>
+            <button type="button" class="cond" data-dec="CONDITIONAL" aria-pressed="false">Conditional<small>com ressalva</small></button>
+            <button type="button" class="recy" data-dec="RECYCLE"     aria-pressed="false">Recycle<small>reanalisar</small></button>
+            <button type="button" class="kill" data-dec="KILL"        aria-pressed="false">Kill<small>encerrar</small></button>
+          </div>
+
+          <div class="ap-deal-extra" id="extraCommon">
+            <label class="ap-fieldlabel">Decisor (quem assina)</label>
+            <input class="ap-in" id="deciderName" placeholder="Ex: Marina Alves (Head de Delivery)">
+          </div>
+
+          <div class="ap-deal-extra" id="extraCond">
+            <label class="ap-fieldlabel">Ressalva / condição para o Go</label>
+            <textarea class="ap-area" placeholder="Ex: exigir indicação de stakeholder técnico do cliente antes do kickoff"></textarea>
+          </div>
+          <div class="ap-deal-extra" id="extraRecy">
+            <label class="ap-fieldlabel">Motivo do recycle</label>
+            <textarea class="ap-area" placeholder="Ex: falta o transcript completo da call técnica"></textarea>
+          </div>
+          <div class="ap-deal-extra" id="extraKill">
+            <label class="ap-fieldlabel">Motivo do kill</label>
+            <textarea class="ap-area" placeholder="Ex: prazo tecnicamente inviável mesmo com discovery"></textarea>
+            <label class="ap-fieldlabel">Critério de kill</label>
+            <select class="ap-select" id="killTag">
+              <option value="">Selecione um critério</option>
+              <option>Sem stakeholder técnico do cliente</option>
+              <option>Prazo tecnicamente inviável</option>
+              <option>Escopo indefinido demais</option>
+              <option>Orçamento incompatível com o escopo</option>
+              <option>Fora da competência técnica atual</option>
+            </select>
+            <p style="font-size:11.5px;color:var(--faint);margin:8px 0 0">Critérios de exemplo (os 5 da proposta). A decisão final é sempre humana.</p>
+          </div>
+
+          <button class="ap-register" id="registerBtn" type="button" disabled>Selecione uma decisão</button>
+          <div class="ap-decided" id="decidedMsg"><span>&#10003;</span><span id="decidedText"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. proposal documents -->
+    <section class="ap-sec">
+      <div class="ap-sec-head">
+        <span class="ap-sec-num">06</span>
+        <div>
+          <h2 class="ap-sec-title">Proposta · documentos gerados</h2>
+          <p class="ap-sec-note">Montados a partir da análise e das funcionalidades marcadas go. Atualizam quando você muda algo acima.</p>
+        </div>
+      </div>
+      <div class="ap-card">
+        <div class="ap-blk" style="border-bottom:0">
+          <div class="ap-doc-tabs" id="docTabs">
+            <button class="ap-doc-tab" type="button" data-doc="brief" aria-pressed="true">Brief interno (Definition of Ready)</button>
+            <button class="ap-doc-tab" type="button" data-doc="client" aria-pressed="false">Proposta comercial (cliente)</button>
+          </div>
+          <div class="ap-doc show" id="docBrief"></div>
+          <div class="ap-doc" id="docClient"></div>
+          <div class="ap-doc-actions">
+            <button class="ap-doc-copy" id="docCopy" type="button">Copiar documento aberto</button>
+            <span style="font-size:12px;color:var(--faint);align-self:center">Regenera sozinho ao mudar severidade, escopo ou esforço.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="ap-toast" id="toast"></div>
+
+<!-- AI chat assistant -->
+<button class="ac-launch" id="acLaunch" type="button">
+  <span class="ac-spark">&#10024;</span> Perguntar ao agente
+</button>
+
+<div class="ac-panel" id="acPanel" role="dialog" aria-label="Assistente da análise">
+  <div class="ac-head">
+    <div class="ac-avatar">&#10024;</div>
+    <div class="ac-h-main">
+      <b>Assistente da análise</b>
+      <small>Pergunte por que o agente recomendou isto</small>
+    </div>
+    <button class="ac-close" id="acClose" type="button" aria-label="Fechar">&times;</button>
+  </div>
+  <div class="ac-msgs" id="acMsgs">
+    <div class="ac-typing" id="acTyping"><span></span><span></span><span></span></div>
+  </div>
+  <div class="ac-chips" id="acChips"></div>
+  <div class="ac-input-row">
+    <input class="ac-input" id="acInput" placeholder="Pergunte sobre esta análise..." autocomplete="off">
+    <button class="ac-send" id="acSend" type="button" aria-label="Enviar">&#10148;</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var SEV = {
+    S1: { hours: 24, desc: "deal estratégico", why: "Gatilho: setor saúde + dados de pacientes (compliance). Prazo travado por marco de marketing.",
+          route: "Comitê de Arquitetura + Head de Delivery", routeDesc: "Aprovação sênior obrigatória para deals estratégicos (S1).", mode: "Bloqueante", modeClass: "mode-block" },
+    S2: { hours: 72, desc: "revisão padrão", why: "Complexidade moderada. Revisão técnica padrão antes do avanço.",
+          route: "Tech Lead da conta", routeDesc: "Revisão técnica padrão (S2).", mode: "Bloqueante", modeClass: "mode-block" },
+    S3: { hours: 120, desc: "deal especulativo", why: "Sem gatilhos de compliance, prazo ou orçamento alto. Deal especulativo.",
+          route: "Fast-track · revisão consultiva", routeDesc: "Sem gate formal. Banner informativo, não trava (S3).", mode: "Consultivo", modeClass: "mode-consult" }
+  };
+  var AGENT_SEV = "S1";
+  var current = "S1";
+
+  var NFRS = [
+    { text: "LGPD / dados sensíveis de pacientes (setor saúde)", hidden: false, src: "agent" },
+    { text: "Integração com prontuário legado sem suporte do fornecedor", hidden: false, src: "agent" },
+    { text: "Disponibilidade / SLA do assistente de triagem em horário de pico", hidden: false, src: "agent" },
+    { text: "ANS de 99,9% mencionada de passagem no minuto 17 da call", hidden: true, src: "agent" }
+  ];
+  var RISKS = [
+    { text: "Prazo travado pela campanha de marketing de fim de ano" },
+    { text: "Prontuário legado sem suporte: integração de alto risco" },
+    { text: "Compliance de saúde não escopada pelo comercial" }
+  ];
+  var SQUAD = [
+    { name: "Ana Paula", role: "PO", sen: "Sênior", skills: ["Discovery", "Saúde"] },
+    { name: "Carlos H.", role: "Arquiteto", sen: "Sênior", skills: ["Integração", "Compliance"] },
+    { name: "Pedro", role: "Backend", sen: "Pleno", skills: ["Node", "APIs"] },
+    { name: "Paulo", role: "Frontend", sen: "Pleno", skills: ["React", "Next"] },
+    { name: "Sophia", role: "QA", sen: "Pleno", skills: ["E2E", "SLA"] }
+  ];
+
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+  function toast(m){ var t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); setTimeout(function(){t.classList.remove("show");},1900); }
+  function two(n){ return (n<10?"0":"")+n; }
+
+  /* mark a block as edited by the human */
+  function markEdited(blockName){
+    var blk = document.querySelector('[data-block="'+blockName+'"]');
+    if (!blk) return;
+    var src = blk.querySelector("[data-src]");
+    if (src && src.classList.contains("src-agent")){
+      src.classList.remove("src-agent"); src.classList.add("src-edit");
+      src.textContent = "Editado por você";
+    }
+  }
+
+  /* ---------- severity ---------- */
+  function applySeverity(sev){
+    current = sev;
+    var d = SEV[sev];
+    var badge = document.getElementById("sevBadge");
+    badge.className = "ap-sevbadge sev-" + sev.toLowerCase();
+    badge.innerHTML = sev + ' <small>' + d.desc + '</small>';
+    document.getElementById("sevWhy").textContent = d.why;
+    document.getElementById("routeName").textContent = d.route;
+    document.getElementById("routeDesc").textContent = d.routeDesc;
+    var rm = document.getElementById("routeMode");
+    rm.textContent = d.mode; rm.className = "ap-route-mode " + d.modeClass;
+    document.getElementById("fastBanner").classList.toggle("show", sev === "S3");
+    resetSla(d.hours);
+    document.querySelectorAll("#sevSeg button").forEach(function(b){
+      b.setAttribute("aria-pressed", b.getAttribute("data-sev") === sev ? "true" : "false");
+    });
+    if (sev !== AGENT_SEV) markEdited("severity");
+  }
+  document.getElementById("sevSeg").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if (!b) return;
+    applySeverity(b.getAttribute("data-sev"));
+  });
+
+  /* ---------- SLA countdown ---------- */
+  var deadline = null;
+  var WD = ["dom","seg","ter","qua","qui","sex","sáb"];
+  function fmtWhen(ts){
+    var d = new Date(ts);
+    return WD[d.getDay()] + ", " + two(d.getDate()) + "/" + two(d.getMonth()+1) +
+           " às " + two(d.getHours()) + ":" + two(d.getMinutes());
+  }
+  function updateReturn(hours){
+    var when = fmtWhen(deadline);
+    document.getElementById("returnWhen").textContent = when;
+    document.getElementById("returnNote").textContent =
+      "O agente definiu este prazo a partir da severidade " + current + " (SLA " + hours + "h). É o compromisso a comunicar ao cliente sobre quando o time volta com um posicionamento.";
+  }
+  document.getElementById("returnCopy").addEventListener("click", function(){
+    var txt = "Retornaremos com um posicionamento até " + fmtWhen(deadline) + ".";
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function(){ toast("Aviso copiado"); }, function(){ toast("Não consegui copiar"); });
+    } else { toast("Copie: " + txt); }
+  });
+  function resetSla(hours){ deadline = new Date().getTime() + hours*3600*1000; updateReturn(hours); tickSla(); }
+  function tickSla(){
+    if (!deadline) return;
+    var ms = deadline - new Date().getTime();
+    if (ms < 0) ms = 0;
+    var h = Math.floor(ms/3600000), m = Math.floor(ms%3600000/60000), s = Math.floor(ms%60000/1000);
+    var el = document.getElementById("slaClock");
+    el.textContent = two(h)+":"+two(m)+":"+two(s);
+    el.classList.toggle("urgent", h < 24);
+  }
+  setInterval(tickSla, 1000);
+
+  /* ---------- NFR list ---------- */
+  function renderNfr(){
+    var host = document.getElementById("nfrList"); host.innerHTML = "";
+    NFRS.forEach(function(n, i){
+      var row = document.createElement("div"); row.className = "ap-nfr";
+      row.innerHTML =
+        '<input class="ap-in" data-i="'+i+'" value="'+esc(n.text)+'">' +
+        (n.hidden ? '<span class="ap-hidden-tag">escondida na call</span>' : '') +
+        '<button class="ap-x" data-del="'+i+'" type="button" aria-label="Remover">&times;</button>';
+      host.appendChild(row);
+    });
+  }
+  document.getElementById("nfrList").addEventListener("input", function(e){
+    var i = e.target.getAttribute("data-i"); if (i===null) return;
+    NFRS[+i].text = e.target.value; markEdited("nfr");
+  });
+  document.getElementById("nfrList").addEventListener("click", function(e){
+    var i = e.target.getAttribute("data-del"); if (i===null) return;
+    NFRS.splice(+i,1); renderNfr(); markEdited("nfr");
+  });
+  document.getElementById("nfrAdd").addEventListener("click", function(){
+    NFRS.push({ text:"", hidden:false, src:"you" }); renderNfr(); markEdited("nfr");
+    var inputs = document.querySelectorAll("#nfrList .ap-in");
+    if (inputs.length) inputs[inputs.length-1].focus();
+  });
+
+  /* ---------- risk ---------- */
+  function renderRisks(){
+    var host = document.getElementById("riskList"); host.innerHTML = "";
+    RISKS.forEach(function(r,i){
+      var row = document.createElement("div"); row.className = "ap-nfr";
+      row.innerHTML = '<input class="ap-in" data-i="'+i+'" value="'+esc(r.text)+'">' +
+        '<button class="ap-x" data-del="'+i+'" type="button" aria-label="Remover">&times;</button>';
+      host.appendChild(row);
+    });
+  }
+  document.getElementById("riskList").addEventListener("input", function(e){
+    var i=e.target.getAttribute("data-i"); if(i===null)return; RISKS[+i].text=e.target.value; markEdited("risk");
+  });
+  document.getElementById("riskList").addEventListener("click", function(e){
+    var i=e.target.getAttribute("data-del"); if(i===null)return; RISKS.splice(+i,1); renderRisks(); markEdited("risk");
+  });
+  document.getElementById("riskInput").addEventListener("input", function(e){
+    var v = Math.max(0, Math.min(100, +e.target.value||0));
+    document.getElementById("riskNum").textContent = v;
+    document.getElementById("riskFill").style.width = v + "%";
+    markEdited("risk");
+  });
+  ["effMin","effMax"].forEach(function(id){
+    document.getElementById(id).addEventListener("input", function(){ markEdited("effort"); });
+  });
+
+  /* ---------- squad ---------- */
+  function renderSquad(){
+    document.getElementById("squad").innerHTML = SQUAD.map(function(p){
+      return '<div class="ap-person"><b>'+esc(p.name)+'</b><div class="ap-role">'+esc(p.role)+' · '+esc(p.sen)+'</div>' +
+        '<div class="ap-chips">'+p.skills.map(function(s){return '<span class="ap-chip">'+esc(s)+'</span>';}).join('')+'</div></div>';
+    }).join('');
+  }
+
+  /* ---------- confirm analysis ---------- */
+  document.getElementById("confirmBtn").addEventListener("click", function(){
+    this.classList.add("done"); this.textContent = "Análise confirmada ✓";
+    document.getElementById("validatedBanner").classList.add("show");
+    toast("Análise validada");
+  });
+
+  /* ---------- deal desk ---------- */
+  var decision = null;
+  var extras = { CONDITIONAL:"extraCond", RECYCLE:"extraRecy", KILL:"extraKill" };
+  document.getElementById("dealBtns").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    decision = b.getAttribute("data-dec");
+    document.querySelectorAll("#dealBtns button").forEach(function(x){
+      x.setAttribute("aria-pressed", x===b ? "true":"false");
+    });
+    document.getElementById("extraCommon").classList.add("show");
+    ["extraCond","extraRecy","extraKill"].forEach(function(id){
+      document.getElementById(id).classList.toggle("show", extras[decision]===id);
+    });
+    var reg = document.getElementById("registerBtn");
+    reg.disabled = false; reg.textContent = "Registrar decisão: " + decision;
+    document.getElementById("decidedMsg").classList.remove("show");
+  });
+  document.getElementById("registerBtn").addEventListener("click", function(){
+    if (!decision) return;
+    var who = document.getElementById("deciderName").value.trim() || "(decisor não informado)";
+    var msg = document.getElementById("decidedMsg");
+    document.getElementById("decidedText").textContent = "Decisão " + decision + " registrada por " + who + ". Brief de saída gerado.";
+    msg.classList.add("show");
+    toast("Decisão registrada");
+  });
+
+  /* ---------- form review collapse ---------- */
+  document.getElementById("revToggle").addEventListener("click", function(){
+    var card = document.getElementById("revCard");
+    var hidden = card.style.display === "none";
+    card.style.display = hidden ? "" : "none";
+    this.textContent = hidden ? "ocultar" : "mostrar";
+  });
+
+  /* ---------- features go/no-go ---------- */
+  var FEATURES = [
+    { name: "Triagem inicial de sintomas por IA", prio: "Must", go: true,  note: "Núcleo do pedido. Exige disclaimer e cuidado com responsabilidade clínica." },
+    { name: "Agendamento automático de consultas", prio: "Must", go: true,  note: "Depende da integração com a agenda do prontuário." },
+    { name: "Lembretes automáticos (reduzir faltas)", prio: "Should", go: true, note: "Alto valor, baixo custo. Bom quick win para mostrar resultado cedo." },
+    { name: "Integração com prontuário legado", prio: "Must", go: true,  note: "Maior risco técnico. Só dá go com discovery pago para dimensionar." },
+    { name: "Conformidade LGPD / trilha de auditoria", prio: "Must", go: true, note: "Obrigatório no setor saúde. Não é opcional." },
+    { name: "Painel de BI avançado de atendimento", prio: "Could", go: false, note: "Fora do MVP. Recomendo tirar da 1ª fase para proteger o prazo." }
+  ];
+
+  function renderFeatures(){
+    var host = document.getElementById("featList");
+    host.innerHTML = FEATURES.map(function(f, i){
+      return '<div class="ap-feat' + (f.go ? '' : ' isnogo') + '" data-i="' + i + '">' +
+        '<div class="ap-feat-top">' +
+          '<span class="ap-feat-name">' + esc(f.name) + '</span>' +
+          '<span class="ap-prio">' + esc(f.prio) + '</span>' +
+          '<span class="ap-gng">' +
+            '<button type="button" class="go" data-go="' + i + '" aria-pressed="' + (f.go ? 'true':'false') + '">Go</button>' +
+            '<button type="button" class="nogo" data-nogo="' + i + '" aria-pressed="' + (!f.go ? 'true':'false') + '">No-go</button>' +
+          '</span>' +
+        '</div>' +
+        '<label class="ap-feat-notelabel">Anotação / justificativa</label>' +
+        '<textarea class="ap-feat-note" data-note="' + i + '" placeholder="Por que go ou no-go?">' + esc(f.note) + '</textarea>' +
+      '</div>';
+    }).join("");
+  }
+  document.getElementById("featList").addEventListener("click", function(e){
+    var g = e.target.getAttribute("data-go"), n = e.target.getAttribute("data-nogo");
+    if (g !== null){ FEATURES[+g].go = true; renderFeatures(); regenDocs(); }
+    else if (n !== null){ FEATURES[+n].go = false; renderFeatures(); regenDocs(); }
+  });
+  document.getElementById("featList").addEventListener("input", function(e){
+    var i = e.target.getAttribute("data-note");
+    if (i !== null){ FEATURES[+i].note = e.target.value; regenDocs(); }
+  });
+
+  /* ---------- proposal documents ---------- */
+  var CONTRACT = {
+    S1: "Discovery pago abatível (8-15%) + Target Price com cap. Deal estratégico: proteger margem e prazo.",
+    S2: "Discovery pago abatível + Target Price. Modelo padrão recomendado.",
+    S3: "Discovery interno gratuito, fast-track. Deal especulativo, sem gate formal completo."
+  };
+  var CONTRACT_CLIENT = {
+    S1: "Recomendamos iniciar por um Discovery pago (abatível no contrato) para dimensionar a integração e os requisitos de disponibilidade e compliance, seguido de execução com preço-alvo e teto.",
+    S2: "Recomendamos um Discovery pago (abatível no contrato) seguido de execução com preço-alvo.",
+    S3: "Podemos iniciar com um Discovery enxuto e rápido para validar a viabilidade antes de um compromisso maior."
+  };
+  var lastText = { brief: "", client: "" };
+  var activeDoc = "brief";
+
+  function regenDocs(){
+    var sev = current, d = SEV[sev];
+    var eMin = document.getElementById("effMin").value || "?";
+    var eMax = document.getElementById("effMax").value || "?";
+    var goFeats = FEATURES.filter(function(f){ return f.go; });
+    var noFeats = FEATURES.filter(function(f){ return !f.go; });
+    var when = deadline ? fmtWhen(deadline) : "—";
+
+    /* --- brief interno (HTML) --- */
+    var b = '<div class="ap-paper">';
+    b += '<h3>Brief de saída · Definition of Ready</h3>';
+    b += '<p class="ap-paper-meta">Rede de Clínicas Vittá · Severidade ' + sev + ' · uso interno</p>';
+    b += '<h4>Roteamento e prazo</h4><p>Aprovação: ' + esc(d.route) + ' (' + d.mode.toLowerCase() + '). Retorno ao cliente até <b>' + esc(when) + '</b>.</p>';
+    b += '<h4>Escopo aprovado (go)</h4><ul>';
+    goFeats.forEach(function(f){
+      b += '<li><b>' + esc(f.name) + '</b> · ' + esc(f.prio) + (f.note ? '<br><span style="color:var(--muted);font-size:12px"><i>' + esc(f.note) + '</i></span>' : '') + '</li>';
+    });
+    b += '</ul>';
+    if (noFeats.length){
+      b += '<h4>Fora do escopo (no-go)</h4><ul>';
+      noFeats.forEach(function(f){ b += '<li class="out">' + esc(f.name) + (f.note ? ' — ' + esc(f.note) : '') + '</li>'; });
+      b += '</ul>';
+    }
+    b += '<h4>Esforço estimado</h4><p>' + esc(eMin) + ' a ' + esc(eMax) + ' semanas (banda, não ponto único).</p>';
+    b += '<h4>Principais riscos</h4><ul>';
+    RISKS.forEach(function(r){ b += '<li>' + esc(r.text) + '</li>'; });
+    b += '</ul>';
+    b += '<h4>Modelo de contrato recomendado</h4><p>' + esc(CONTRACT[sev]) + '</p>';
+    b += '</div>';
+    document.getElementById("docBrief").innerHTML = b;
+
+    /* --- proposta comercial (HTML) --- */
+    var c = '<div class="ap-paper">';
+    c += '<h3>Proposta de Discovery · Rede de Clínicas Vittá</h3>';
+    c += '<p class="ap-paper-meta">Documento para o cliente</p>';
+    c += '<h4>Entendimento</h4><p>Entendemos que o objetivo é modernizar o atendimento com um assistente de IA para triagem e agendamento, reduzindo custo de call center e faltas, integrado ao sistema de prontuário atual e em conformidade com a legislação de dados de saúde.</p>';
+    c += '<h4>Escopo proposto</h4><ul>';
+    goFeats.forEach(function(f){ c += '<li>' + esc(f.name) + '</li>'; });
+    c += '</ul>';
+    c += '<h4>Prazo estimado</h4><p>Faixa inicial de ' + esc(eMin) + ' a ' + esc(eMax) + ' semanas, a ser confirmada no Discovery. Consideramos o marco da campanha de fim de ano no planejamento.</p>';
+    c += '<h4>Como propomos trabalhar</h4><p>' + esc(CONTRACT_CLIENT[sev]) + '</p>';
+    c += '<h4>Próximos passos</h4><p>Retornaremos com um posicionamento até <b>' + esc(when) + '</b>. Na sequência, alinhamos o kickoff do Discovery.</p>';
+    c += '</div>';
+    document.getElementById("docClient").innerHTML = c;
+
+    /* --- plain text versions for copy --- */
+    var tb = "BRIEF DE SAÍDA (uso interno) — Rede de Clínicas Vittá — Severidade " + sev + "\n\n";
+    tb += "Roteamento: " + d.route + " (" + d.mode + "). Retorno ao cliente até " + when + ".\n\n";
+    tb += "Escopo aprovado (go):\n" + goFeats.map(function(f){ return "- " + f.name + " [" + f.prio + "]" + (f.note ? " — " + f.note : ""); }).join("\n") + "\n\n";
+    if (noFeats.length) tb += "Fora do escopo (no-go):\n" + noFeats.map(function(f){ return "- " + f.name + (f.note ? " — " + f.note : ""); }).join("\n") + "\n\n";
+    tb += "Esforço estimado: " + eMin + " a " + eMax + " semanas.\n\n";
+    tb += "Riscos:\n" + RISKS.map(function(r){ return "- " + r.text; }).join("\n") + "\n\n";
+    tb += "Modelo de contrato: " + CONTRACT[sev];
+    lastText.brief = tb;
+
+    var tc = "PROPOSTA DE DISCOVERY — Rede de Clínicas Vittá\n\n";
+    tc += "Entendimento: assistente de IA para triagem e agendamento, integrado ao prontuário, em conformidade com dados de saúde.\n\n";
+    tc += "Escopo proposto:\n" + goFeats.map(function(f){ return "- " + f.name; }).join("\n") + "\n\n";
+    tc += "Prazo estimado: " + eMin + " a " + eMax + " semanas (a confirmar no Discovery).\n\n";
+    tc += "Como propomos trabalhar: " + CONTRACT_CLIENT[sev] + "\n\n";
+    tc += "Próximos passos: retorno até " + when + ", seguido do kickoff do Discovery.";
+    lastText.client = tc;
+  }
+
+  document.getElementById("docTabs").addEventListener("click", function(e){
+    var b = e.target.closest(".ap-doc-tab"); if (!b) return;
+    activeDoc = b.getAttribute("data-doc");
+    document.querySelectorAll(".ap-doc-tab").forEach(function(x){ x.setAttribute("aria-pressed", x===b ? "true":"false"); });
+    document.getElementById("docBrief").classList.toggle("show", activeDoc === "brief");
+    document.getElementById("docClient").classList.toggle("show", activeDoc === "client");
+  });
+  document.getElementById("docCopy").addEventListener("click", function(){
+    var txt = lastText[activeDoc] || "";
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function(){ toast("Documento copiado"); }, function(){ toast("Não consegui copiar"); });
+    } else { toast("Copie manualmente o documento."); }
+  });
+
+  /* regenerate docs when upstream inputs change */
+  document.getElementById("sevSeg").addEventListener("click", regenDocs);
+  document.getElementById("effMin").addEventListener("input", regenDocs);
+  document.getElementById("effMax").addEventListener("input", regenDocs);
+  document.getElementById("riskList").addEventListener("input", regenDocs);
+
+  /* init */
+  renderNfr(); renderRisks(); renderSquad(); renderFeatures(); applySeverity("S1"); regenDocs();
+
+  /* ---------- AI chat assistant ---------- */
+  var GREETING = "Oi! Analisei este lead da Rede de Clínicas Vittá. Posso explicar cada recomendação, mostrar de onde tirei os requisitos, ou comparar com projetos parecidos que já passaram por aqui. O que você quer conferir?";
+
+  var CHIPS = [
+    { q: "Por que classificou como S1?", k: "sev" },
+    { q: "Já fizemos projetos parecidos?", k: "past" },
+    { q: "De onde veio a NFR de 99,9%?", k: "nfr" },
+    { q: "Como chegou no risco 78?", k: "risk" },
+    { q: "Por que deu no-go no painel de BI?", k: "scope" },
+    { q: "Por que roteou pro comitê?", k: "route" }
+  ];
+
+  var ANSWERS = {
+    sev: [
+      "Classifiquei como **S1** por dois gatilhos independentes, e qualquer um sozinho já elevaria:",
+      "• **Compliance de saúde**: o cliente lida com dados de pacientes. Setor saúde + dados sensíveis é gatilho automático de S1 (LGPD).",
+      "• **Prazo travado**: a entrega está amarrada à campanha de marketing de fim de ano, um marco fixo que o time não controla.",
+      "Se você discordar, pode rebaixar no seletor de severidade, mas recomendo manter S1."
+    ],
+    past: [
+      "Sim. Achei **3 projetos** com perfil parecido no histórico:",
+      "• **Clínica Bem-Estar** (2024): integração com prontuário legado. Atrasou 6 semanas por falta de stakeholder técnico do cliente.",
+      "• **HealthOne** (2023): triagem com IA + LGPD. Entregue no prazo, com discovery pago antes.",
+      "• **RedeSaúde+** (2024): encerrado (Kill) por prazo tecnicamente inviável.",
+      "**Padrão**: os que tiveram discovery pago e stakeholder técnico deram certo; os que aceitaram prazo agressivo sem discovery deram errado. Por isso recomendo discovery pago aqui."
+    ],
+    nfr: [
+      "Tirei do **transcript da call**: no minuto 17 o cliente mencionou de passagem uma **ANS de 99,9%**.",
+      "O vendedor não registrou isso no formulário, mas é um requisito de disponibilidade caro: muda a arquitetura (redundância, observabilidade, plano de contingência).",
+      "Por isso marquei como *escondida na call*, é exatamente o tipo de coisa que costuma estourar prazo quando aparece só na entrega."
+    ],
+    risk: [
+      "O **78/100** é a soma dos gatilhos de risco que encontrei:",
+      "• Compliance de saúde não escopada: **+30**",
+      "• Prazo agressivo travado por marco fixo: **+25**",
+      "• Integração com legado sem suporte do fornecedor: **+15**",
+      "• Stakeholder técnico do cliente ainda não confirmado: **+10**",
+      "Somou 80, ajustei para 78 pela maturidade do cliente. O teto é 100. Você pode editar o número se tiver contexto que eu não vi."
+    ],
+    scope: [
+      "Dei **no-go** no painel de BI avançado porque ele é *Could* (nice-to-have) e não ataca a dor central: reduzir custo de call center e faltas.",
+      "Num deal S1 com prazo travado pela campanha de fim de ano, cada funcionalidade extra come margem de prazo. Tirar o BST da 1ª fase protege a entrega do que importa.",
+      "Se você discordar, é só marcar **go** que ele entra na proposta na hora. A justificativa fica registrada na anotação da funcionalidade."
+    ],
+    route: [
+      "Roteei para **Comitê de Arquitetura + Head de Delivery** porque é S1.",
+      "Deals S1 são estratégicos e de alto risco: a política é exigir aprovação sênior antes do avanço (bloqueante).",
+      "Se você rebaixar para S2, o roteamento muda automaticamente para o Tech Lead da conta; em S3 vira fast-track consultivo."
+    ],
+    fallback: [
+      "Boa pergunta. Neste protótipo minhas respostas são roteiradas para a demo, então consigo detalhar melhor: **severidade**, **projetos passados parecidos**, **de onde veio cada NFR**, **cálculo do risco** e **roteamento**.",
+      "Toque em uma das sugestões abaixo que eu explico com os dados deste lead."
+    ]
+  };
+
+  var msgs = document.getElementById("acMsgs");
+  var typing = document.getElementById("acTyping");
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function fmtLine(s){ return esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"); }
+  function addMsg(role, lines){
+    var el = document.createElement("div");
+    el.className = "ac-msg " + role;
+    el.innerHTML = (Array.isArray(lines) ? lines : [lines]).map(fmtLine).join("<br>");
+    msgs.insertBefore(el, typing);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  function respond(key){
+    typing.classList.add("show");
+    msgs.scrollTop = msgs.scrollHeight;
+    var delay = reduce ? 0 : 650;
+    setTimeout(function(){
+      typing.classList.remove("show");
+      addMsg("agent", ANSWERS[key] || ANSWERS.fallback);
+    }, delay);
+  }
+  function classify(text){
+    var t = text.toLowerCase();
+    if (/s1|s2|s3|severidad|grav/.test(t)) return "sev";
+    if (/parecid|passad|hist|outr|antes|similar|projeto/.test(t)) return "past";
+    if (/99|ans|nfr|requisit|transcript|escondid|disponibilidad/.test(t)) return "nfr";
+    if (/risco|risk|78|score|pontua/.test(t)) return "risk";
+    if (/escopo|funcionalidad|no.?go|painel|bi|fora|feature|proposta/.test(t)) return "scope";
+    if (/rote|comit|aprov|quem|delivery/.test(t)) return "route";
+    return "fallback";
+  }
+  function send(text){
+    text = (text||"").trim(); if (!text) return;
+    addMsg("user", text);
+    respond(classify(text));
+  }
+
+  document.getElementById("acChips").innerHTML = CHIPS.map(function(c,i){
+    return '<button class="ac-chip" type="button" data-c="'+i+'">'+esc(c.q)+'</button>';
+  }).join("");
+  document.getElementById("acChips").addEventListener("click", function(e){
+    var b = e.target.closest(".ac-chip"); if (!b) return;
+    var c = CHIPS[+b.getAttribute("data-c")];
+    addMsg("user", c.q); respond(c.k);
+  });
+
+  var launched = false;
+  function openChat(){
+    document.getElementById("acPanel").classList.add("show");
+    document.getElementById("acLaunch").classList.add("hidden");
+    if (!launched){ launched = true; addMsg("agent", GREETING); }
+    document.getElementById("acInput").focus();
+  }
+  document.getElementById("acLaunch").addEventListener("click", openChat);
+  document.getElementById("acClose").addEventListener("click", function(){
+    document.getElementById("acPanel").classList.remove("show");
+    document.getElementById("acLaunch").classList.remove("hidden");
+  });
+  document.getElementById("acSend").addEventListener("click", function(){
+    var inp = document.getElementById("acInput"); send(inp.value); inp.value = "";
+  });
+  document.getElementById("acInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter"){ send(this.value); this.value = ""; }
+  });
+})();
+</script>

@@ -1,0 +1,830 @@
+<title>Intake Builder</title>
+<style>
+  :root {
+    --ground: #EAEDF2;
+    --surface: #FFFFFF;
+    --text: #1A2130;
+    --muted: #5C677A;
+    --faint: #8A93A6;
+    --line: #D5DAE3;
+    --accent: #4B3FD6;
+    --accent-soft: #ECEAFB;
+    --agent: #138A82;
+    --agent-soft: #E2F2F0;
+    --s1: #D6453F;
+    --s2: #C8841A;
+    --s3: #6B7588;
+    --crit-soft: #FBECE9;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius: 10px;
+    --shadow: 0 1px 2px rgba(26,33,48,.06), 0 8px 24px rgba(26,33,48,.06);
+  }
+
+  * { box-sizing: border-box; }
+
+  .ib {
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 32px clamp(16px, 4vw, 56px) 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- header ---------- */
+  .ib-head {
+    max-width: 1280px;
+    margin: 0 auto 28px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 22px;
+  }
+  .ib-kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  .ib-title {
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 700;
+    letter-spacing: -.025em;
+    margin: 0;
+    line-height: 1.05;
+  }
+  .ib-sub {
+    color: var(--muted);
+    font-size: 15px;
+    margin: 8px 0 0;
+    max-width: 56ch;
+  }
+  .ib-stats {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .ib-stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    min-width: 76px;
+  }
+  .ib-stat b {
+    display: block;
+    font-family: var(--mono);
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 600;
+  }
+  .ib-stat span {
+    font-size: 11px;
+    color: var(--faint);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+
+  /* ---------- layout ---------- */
+  .ib-grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 960px) {
+    .ib-grid { grid-template-columns: 1fr; }
+    .ib-preview-wrap { position: static !important; }
+  }
+
+  /* ---------- editor ---------- */
+  .ib-zone { margin-bottom: 30px; }
+  .ib-zone-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .ib-zone-num {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .ib-zone-title {
+    font-size: 16px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+    margin: 0;
+  }
+  .ib-zone-note {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 2px 0 0;
+  }
+
+  .ib-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+    transition: opacity .15s ease, border-color .15s ease;
+  }
+  .ib-card.off { opacity: .5; }
+  .ib-card.crit { border-left: 3px solid var(--s1); }
+
+  .ib-card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .ib-key {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+    background: var(--ground);
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .ib-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  .ib-badge.new { background: var(--accent-soft); color: var(--accent); }
+  .ib-badge.crit { background: var(--crit-soft); color: var(--s1); }
+  .ib-card-top .ib-spacer { flex: 1; }
+
+  .ib-row {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 10px 12px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .ib-row label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--faint);
+    font-family: var(--mono);
+  }
+  .ib-input, .ib-select {
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text);
+    background: var(--ground);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .ib-input:focus, .ib-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .ib-card-foot {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+    flex-wrap: wrap;
+  }
+
+  /* switch */
+  .ib-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .ib-switch input { position: absolute; opacity: 0; pointer-events: none; }
+  .ib-track {
+    width: 34px;
+    height: 19px;
+    border-radius: 99px;
+    background: var(--line);
+    position: relative;
+    transition: background .15s ease;
+    flex: none;
+  }
+  .ib-track::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.25);
+    transition: transform .15s ease;
+  }
+  .ib-switch input:checked + .ib-track { background: var(--accent); }
+  .ib-switch input:checked + .ib-track::after { transform: translateX(15px); }
+  .ib-switch input:focus-visible + .ib-track { box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .ib-remove {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .ib-remove:hover { color: var(--s1); border-color: var(--s1); background: var(--crit-soft); }
+
+  .ib-add {
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    background: var(--surface);
+    border: 1px dashed var(--accent);
+    border-radius: var(--radius);
+    padding: 11px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .ib-add:hover { background: var(--accent-soft); }
+
+  /* ---------- preview ---------- */
+  .ib-preview-wrap { position: sticky; top: 24px; }
+  .ib-preview {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .ib-preview-bar {
+    background: var(--text);
+    color: #fff;
+    padding: 9px 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .ib-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--agent); flex: none; }
+  .ib-preview-body { padding: 22px 22px 24px; }
+  .ib-pv-title { font-size: 19px; font-weight: 700; margin: 0 0 4px; letter-spacing: -.01em; }
+  .ib-pv-sub { font-size: 13px; color: var(--muted); margin: 0 0 20px; }
+
+  .ib-fld { margin-bottom: 16px; }
+  .ib-fld:last-child { margin-bottom: 0; }
+  .ib-fld-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .ib-req { color: var(--s1); margin-left: 2px; }
+  .ib-fld-input, .ib-fld-area {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text);
+    background: #FBFCFE;
+  }
+  .ib-fld-input::placeholder, .ib-fld-area::placeholder { color: var(--faint); }
+  .ib-fld-input:focus, .ib-fld-area:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .ib-fld-area { resize: vertical; min-height: 64px; }
+  .ib-fld-area.lg { min-height: 120px; }
+  .ib-bool { display: flex; gap: 8px; }
+  .ib-bool span {
+    flex: 1;
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    background: #FBFCFE;
+  }
+  .ib-bool span:first-child { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .ib-drop {
+    border: 1.5px dashed var(--line);
+    border-radius: 10px;
+    background: #FBFCFE;
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .ib-drop-ic {
+    width: 34px; height: 34px;
+    margin: 0 auto 8px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .ib-drop b { display: block; font-size: 13px; color: var(--text); font-weight: 600; }
+  .ib-drop small { display: block; font-size: 11.5px; color: var(--faint); margin-top: 3px; }
+  .ib-drop .ib-drop-btn {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 7px;
+    padding: 6px 12px;
+  }
+  .ib-grp-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 22px 0 12px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line);
+  }
+  .ib-grp-tag:first-child { border: 0; padding-top: 0; margin-top: 0; }
+  .ib-submit {
+    margin-top: 22px;
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    border-radius: 9px;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+  }
+
+  /* ---------- agent reference band ---------- */
+  .ib-agent {
+    max-width: 1280px;
+    margin: 32px auto 0;
+    background: var(--agent-soft);
+    border: 1px solid #BFE0DC;
+    border-radius: 14px;
+    padding: 22px 24px;
+  }
+  .ib-agent h3 {
+    font-size: 15px;
+    margin: 0 0 4px;
+    color: #0E6B64;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ib-agent p { font-size: 13px; color: #2C5C58; margin: 0 0 14px; max-width: 70ch; }
+  .ib-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ib-chip {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--surface);
+    color: var(--agent);
+    border: 1px dashed var(--agent);
+    border-radius: 99px;
+    padding: 6px 12px;
+  }
+
+  /* ---------- export bar ---------- */
+  .ib-export {
+    max-width: 1280px;
+    margin: 26px auto 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .ib-btn {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 9px;
+    padding: 11px 18px;
+    cursor: pointer;
+    border: 1px solid var(--accent);
+  }
+  .ib-btn.primary { background: var(--accent); color: #fff; }
+  .ib-btn.ghost { background: transparent; color: var(--accent); }
+  .ib-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .ib-hint { font-size: 13px; color: var(--muted); }
+
+  /* toast + modal */
+  .ib-toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: #fff;
+    padding: 11px 18px;
+    border-radius: 9px;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+    z-index: 30;
+  }
+  .ib-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .ib-modal {
+    position: fixed; inset: 0;
+    background: rgba(26,33,48,.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 40;
+  }
+  .ib-modal.show { display: flex; }
+  .ib-modal-box {
+    background: var(--surface);
+    border-radius: 14px;
+    width: min(720px, 100%);
+    max-height: 84vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .ib-modal-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ib-modal-head h3 { margin: 0; font-size: 16px; }
+  .ib-modal-head button {
+    background: none; border: 0; font-size: 22px; cursor: pointer; color: var(--muted); line-height: 1;
+  }
+  .ib-code {
+    margin: 0;
+    padding: 18px 20px;
+    overflow: auto;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    white-space: pre;
+    color: var(--text);
+    background: #FBFCFE;
+  }
+  .ib-modal-foot { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="ib">
+  <header class="ib-head">
+    <div>
+      <p class="ib-kicker">Loomi OS · Discovery</p>
+      <h1 class="ib-title">Construtor do formulário de Intake</h1>
+      <p class="ib-sub">Edite, ligue/desligue ou remova cada pergunta. O painel à direita mostra ao vivo o que o Comercial vai ver. Quando fechar, copie a configuração para o time.</p>
+    </div>
+    <div class="ib-stats" id="stats"></div>
+  </header>
+
+  <div class="ib-grid">
+    <main id="editor"></main>
+
+    <aside class="ib-preview-wrap">
+      <div class="ib-preview">
+        <div class="ib-preview-bar"><span class="ib-dot"></span> Visão do Comercial</div>
+        <div class="ib-preview-body">
+          <h2 class="ib-pv-title">Novo lead</h2>
+          <p class="ib-pv-sub">Preencha o que souber. O agente cuida do resto.</p>
+          <div id="preview"></div>
+          <button class="ib-submit" type="button">Analisar lead</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="ib-agent">
+    <h3>O agente extrai (não vira pergunta)</h3>
+    <p>Tudo isto fica fora do formulário de propósito: é o que a Demo B prova que o agente puxa da dor e do transcript, mesmo quando o Comercial não perguntou. Adicionar como campo só somaria atrito sem ganho.</p>
+    <div class="ib-chips" id="agentChips"></div>
+  </section>
+
+  <div class="ib-export">
+    <button class="ib-btn primary" id="copyBtn" type="button">Copiar configuração</button>
+    <button class="ib-btn ghost" id="resetBtn" type="button">Restaurar padrão</button>
+    <span class="ib-hint">Gera uma tabela (rótulo, campo, tipo, obrigatório) pronta para colar no doc da Ana Paula.</span>
+  </div>
+</div>
+
+<div class="ib-toast" id="toast"></div>
+
+<div class="ib-modal" id="modal">
+  <div class="ib-modal-box">
+    <div class="ib-modal-head">
+      <h3>Configuração do Intake</h3>
+      <button type="button" id="modalClose" aria-label="Fechar">&times;</button>
+    </div>
+    <pre class="ib-code" id="modalCode"></pre>
+    <div class="ib-modal-foot">
+      <button class="ib-btn primary" id="modalCopy" type="button">Copiar para a área de transferência</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var TYPES = [
+    { v: "text", label: "texto curto" },
+    { v: "number", label: "número" },
+    { v: "textarea", label: "texto longo" },
+    { v: "textarea-lg", label: "texto longo (grande)" },
+    { v: "boolean", label: "sim / não" },
+    { v: "file", label: "upload de arquivos" }
+  ];
+
+  var ZONES = [
+    { id: "estruturado", num: "01", title: "Campos estruturados", note: "Só o que o Comercial sabe de cabeça. Resposta rápida, baixo atrito." },
+    { id: "livre", num: "02", title: "Texto livre (insumo do agente)", note: "Onde mora tudo que a squad precisa e o agente consegue extrair." }
+  ];
+
+  var DEFAULT = [
+    { key: "clientName", zone: "estruturado", label: "Cliente", placeholder: "Ex: Banco XYZ", type: "text", required: true, active: true, tag: "" },
+    { key: "declaredDeadline", zone: "estruturado", label: "Prazo declarado", placeholder: "Ex: 6 semanas", type: "text", required: false, active: true, tag: "" },
+    { key: "budget", zone: "estruturado", label: "Orçamento (R$)", placeholder: "Ex: 300000", type: "number", required: false, active: true, tag: "" },
+    { key: "mentionedStack", zone: "estruturado", label: "Stack mencionada", placeholder: "Ex: React, Node, SAP legado", type: "text", required: false, active: true, tag: "" },
+    { key: "decisorName", zone: "estruturado", label: "Decisor", placeholder: "Ex: João Silva (CTO)", type: "text", required: false, active: true, tag: "" },
+    { key: "alreadyPromised", zone: "estruturado", label: "O que já foi prometido ao cliente", placeholder: "Prazo, escopo ou preço dito antes do discovery", type: "textarea", required: false, active: true, tag: "crit" },
+    { key: "clientSector", zone: "estruturado", label: "Setor do cliente", placeholder: "Ex: Saúde, Financeiro, Varejo", type: "text", required: false, active: true, tag: "new" },
+    { key: "isReturningClient", zone: "estruturado", label: "Cliente recorrente?", placeholder: "", type: "boolean", required: false, active: true, tag: "new" },
+    { key: "painPoint", zone: "livre", label: "Dor / pedido do cliente", placeholder: "O que o cliente quer resolver e como imagina a solução", type: "textarea", required: true, active: true, tag: "" },
+    { key: "transcript", zone: "livre", label: "Transcript da call", placeholder: "Cole a transcrição. O agente extrai requisitos que passaram despercebidos.", type: "textarea-lg", required: false, active: true, tag: "" },
+    { key: "attachments", zone: "livre", label: "Anexos", placeholder: "Apresentação comercial, proposta, RFP, documentos técnicos", type: "file", required: false, active: true, tag: "new" }
+  ];
+
+  var AGENT_ITEMS = [
+    "Integrações / sistemas legados", "NFRs (SLA, volume, segurança)", "Compliance (LGPD, setor regulado)",
+    "Stakeholder técnico do cliente", "Prioridades Must / Should / Could", "Marcos fixos do cronograma",
+    "Plataformas alvo", "Design system existente", "Greenfield vs legado", "Critério de sucesso", "Economic buyer"
+  ];
+
+  var state = clone(DEFAULT);
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function slug(s) {
+    var base = s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim().split(" ");
+    return base.map(function (w, i) { return i === 0 ? w : w.charAt(0).toUpperCase() + w.slice(1); }).join("") || "campo";
+  }
+  function uniqueKey(base) {
+    var k = base, n = 2;
+    while (state.some(function (q) { return q.key === k; })) { k = base + n; n++; }
+    return k;
+  }
+
+  /* ---------- editor render ---------- */
+  function renderEditor() {
+    var host = document.getElementById("editor");
+    host.innerHTML = "";
+    ZONES.forEach(function (zone) {
+      var sec = document.createElement("section");
+      sec.className = "ib-zone";
+      sec.innerHTML =
+        '<div class="ib-zone-head">' +
+          '<span class="ib-zone-num">' + zone.num + '</span>' +
+          '<div><h2 class="ib-zone-title">' + esc(zone.title) + '</h2>' +
+          '<p class="ib-zone-note">' + esc(zone.note) + '</p></div>' +
+        '</div>';
+      state.forEach(function (q, i) {
+        if (q.zone === zone.id) sec.appendChild(cardEl(q, i));
+      });
+      var add = document.createElement("button");
+      add.className = "ib-add";
+      add.type = "button";
+      add.textContent = "+ Adicionar pergunta";
+      add.addEventListener("click", function () { addQuestion(zone.id); });
+      sec.appendChild(add);
+      host.appendChild(sec);
+    });
+  }
+
+  function cardEl(q, i) {
+    var card = document.createElement("div");
+    card.className = "ib-card" + (q.active ? "" : " off") + (q.tag === "crit" ? " crit" : "");
+
+    var badge = "";
+    if (q.tag === "crit") badge = '<span class="ib-badge crit">Crítico · causa raiz</span>';
+    else if (q.tag === "new") badge = '<span class="ib-badge new">Novo</span>';
+
+    var typeOpts = TYPES.map(function (t) {
+      return '<option value="' + t.v + '"' + (t.v === q.type ? " selected" : "") + '>' + t.label + '</option>';
+    }).join("");
+
+    card.innerHTML =
+      '<div class="ib-card-top">' +
+        '<span class="ib-key">' + esc(q.key) + '</span>' + badge +
+        '<span class="ib-spacer"></span>' +
+        '<button class="ib-remove" type="button" data-act="remove" data-i="' + i + '">remover</button>' +
+      '</div>' +
+      '<div class="ib-row"><label>Rótulo</label>' +
+        '<input class="ib-input" data-f="label" data-i="' + i + '" value="' + esc(q.label) + '"></div>' +
+      (q.type === "boolean" ? "" :
+      '<div class="ib-row"><label>Placeholder</label>' +
+        '<input class="ib-input" data-f="placeholder" data-i="' + i + '" value="' + esc(q.placeholder) + '"></div>') +
+      '<div class="ib-row"><label>Tipo</label>' +
+        '<select class="ib-select" data-f="type" data-i="' + i + '">' + typeOpts + '</select></div>' +
+      '<div class="ib-card-foot">' +
+        switchEl("active", i, q.active, "Ativa no formulário") +
+        switchEl("required", i, q.required, "Obrigatória") +
+      '</div>';
+    return card;
+  }
+
+  function switchEl(field, i, on, text) {
+    return '<label class="ib-switch"><input type="checkbox" data-f="' + field + '" data-i="' + i + '"' +
+      (on ? " checked" : "") + '><span class="ib-track"></span>' + text + '</label>';
+  }
+
+  /* ---------- preview render ---------- */
+  function renderPreview() {
+    var host = document.getElementById("preview");
+    host.innerHTML = "";
+    var lastZone = null;
+    state.forEach(function (q) {
+      if (!q.active) return;
+      if (q.zone !== lastZone) {
+        var tag = document.createElement("div");
+        tag.className = "ib-grp-tag";
+        tag.textContent = q.zone === "livre" ? "Contexto da conversa" : "Dados do lead";
+        host.appendChild(tag);
+        lastZone = q.zone;
+      }
+      var fld = document.createElement("div");
+      fld.className = "ib-fld";
+      var labelHtml = '<label class="ib-fld-label">' + esc(q.label) + (q.required ? '<span class="ib-req">*</span>' : "") + '</label>';
+      var control;
+      if (q.type === "boolean") {
+        control = '<div class="ib-bool"><span>Sim</span><span>Não</span></div>';
+      } else if (q.type === "file") {
+        control = '<div class="ib-drop"><div class="ib-drop-ic">&#8682;</div>' +
+          '<b>Arraste arquivos aqui</b>' +
+          '<small>' + (q.placeholder ? esc(q.placeholder) : "PDF, PPTX, DOCX") + '</small>' +
+          '<span class="ib-drop-btn">Selecionar arquivos</span></div>';
+      } else if (q.type === "textarea" || q.type === "textarea-lg") {
+        control = '<textarea class="ib-fld-area' + (q.type === "textarea-lg" ? " lg" : "") + '" placeholder="' + esc(q.placeholder) + '"></textarea>';
+      } else {
+        control = '<input class="ib-fld-input" type="' + (q.type === "number" ? "number" : "text") + '" placeholder="' + esc(q.placeholder) + '">';
+      }
+      fld.innerHTML = labelHtml + control;
+      host.appendChild(fld);
+    });
+    if (!host.children.length) {
+      host.innerHTML = '<p class="ib-pv-sub">Nenhuma pergunta ativa. Ligue alguma à esquerda.</p>';
+    }
+  }
+
+  function renderStats() {
+    var active = state.filter(function (q) { return q.active; });
+    var req = active.filter(function (q) { return q.required; });
+    var data = [
+      { n: active.length, l: "ativas" },
+      { n: req.length, l: "obrigat." },
+      { n: active.filter(function (q) { return q.zone === "estruturado"; }).length, l: "estrut." },
+      { n: active.filter(function (q) { return q.zone === "livre"; }).length, l: "livres" }
+    ];
+    document.getElementById("stats").innerHTML = data.map(function (d) {
+      return '<div class="ib-stat"><b>' + d.n + '</b><span>' + d.l + '</span></div>';
+    }).join("");
+  }
+
+  function renderAll() { renderEditor(); renderPreview(); renderStats(); }
+
+  /* ---------- actions ---------- */
+  function addQuestion(zone) {
+    var key = uniqueKey("novoCampo");
+    var q = { key: key, zone: zone, label: "Nova pergunta", placeholder: "", type: "text", required: false, active: true, tag: "new" };
+    var lastIdx = -1;
+    state.forEach(function (item, idx) { if (item.zone === zone) lastIdx = idx; });
+    state.splice(lastIdx + 1, 0, q);
+    renderAll();
+  }
+
+  /* delegated events on editor */
+  document.getElementById("editor").addEventListener("input", function (e) {
+    var t = e.target, i = t.getAttribute("data-i"), f = t.getAttribute("data-f");
+    if (i === null) return;
+    i = +i;
+    if (f === "label" || f === "placeholder") {
+      state[i][f] = t.value;
+      renderPreview(); renderStats();
+    }
+  });
+  document.getElementById("editor").addEventListener("change", function (e) {
+    var t = e.target, i = t.getAttribute("data-i"), f = t.getAttribute("data-f");
+    if (i === null) return;
+    i = +i;
+    if (f === "type") { state[i].type = t.value; renderAll(); }
+    else if (f === "active" || f === "required") { state[i][f] = t.checked; renderAll(); }
+  });
+  document.getElementById("editor").addEventListener("click", function (e) {
+    var t = e.target;
+    if (t.getAttribute("data-act") === "remove") {
+      state.splice(+t.getAttribute("data-i"), 1);
+      renderAll();
+    }
+  });
+
+  /* agent chips */
+  document.getElementById("agentChips").innerHTML = AGENT_ITEMS.map(function (x) {
+    return '<span class="ib-chip">' + esc(x) + '</span>';
+  }).join("");
+
+  /* ---------- export ---------- */
+  function buildConfig() {
+    var active = state.filter(function (q) { return q.active; });
+    var lines = ["## Formulário de Intake — configuração", ""];
+    lines.push("| Rótulo | Campo (DTO) | Tipo | Obrigatório | Zona |");
+    lines.push("|---|---|---|---|---|");
+    active.forEach(function (q) {
+      var typeLabel = (TYPES.filter(function (t) { return t.v === q.type; })[0] || {}).label || q.type;
+      lines.push("| " + q.label + " | `" + q.key + "` | " + typeLabel + " | " + (q.required ? "Sim" : "Não") + " | " + (q.zone === "livre" ? "Texto livre" : "Estruturado") + " |");
+    });
+    lines.push("");
+    lines.push("Placeholders / textos de ajuda:");
+    active.forEach(function (q) {
+      if (q.placeholder) lines.push("- `" + q.key + "`: " + q.placeholder);
+    });
+    lines.push("");
+    lines.push("O agente extrai (fora do formulário): " + AGENT_ITEMS.join(", ") + ".");
+    return lines.join("\n");
+  }
+
+  function toast(msg) {
+    var el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    setTimeout(function () { el.classList.remove("show"); }, 1900);
+  }
+
+  function copyText(text, okMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast(okMsg); }, function () { toast("Não consegui copiar. Use o texto na janela."); });
+    } else {
+      toast("Copie o texto da janela.");
+    }
+  }
+
+  document.getElementById("copyBtn").addEventListener("click", function () {
+    var cfg = buildConfig();
+    document.getElementById("modalCode").textContent = cfg;
+    document.getElementById("modal").classList.add("show");
+    copyText(cfg, "Configuração copiada");
+  });
+  document.getElementById("modalCopy").addEventListener("click", function () {
+    copyText(document.getElementById("modalCode").textContent, "Configuração copiada");
+  });
+  document.getElementById("modalClose").addEventListener("click", function () {
+    document.getElementById("modal").classList.remove("show");
+  });
+  document.getElementById("modal").addEventListener("click", function (e) {
+    if (e.target === this) this.classList.remove("show");
+  });
+  document.getElementById("resetBtn").addEventListener("click", function () {
+    state = clone(DEFAULT);
+    renderAll();
+    toast("Voltou ao padrão");
+  });
+
+  renderAll();
+})();
+</script>
